@@ -43,6 +43,25 @@ $WingetUpdateForm.Add_Shown({ WingetUpdateForm_OnShown })
 
 # ELEMENT DEFINITIONS
 
+$tabControl = New-Object System.Windows.Forms.TabControl
+$tabControl.Dock = "Top"
+$tabControl.Height = 124
+
+$tabPageExplore = New-Object System.Windows.Forms.TabPage
+$tabPageExplore.Text = "Explore"
+$tabPageExplore.UseVisualStyleBackColor = $true
+$tabControl.Controls.Add($tabPageExplore)
+
+$tabPageInstalled = New-Object System.Windows.Forms.TabPage
+$tabPageInstalled.Text = "Installed"
+$tabPageInstalled.UseVisualStyleBackColor = $true
+$tabControl.Controls.Add($tabPageInstalled)
+
+$tabPageUpdates = New-Object System.Windows.Forms.TabPage
+$tabPageUpdates.Text = "Updates"
+$tabPageUpdates.UseVisualStyleBackColor = $true
+$tabControl.Controls.Add($tabPageUpdates)
+
 # Title Label
 $Title = New-Object system.Windows.Forms.Label
 $Title.text = "Winget Update GUI"
@@ -134,6 +153,7 @@ $SelectAll.Add_Click({ SelectAll_OnClick })
 
 # GroupBox
 $GroupBox = New-Object System.Windows.Forms.GroupBox
+$GroupBox.Dock = "Top"
 $GroupBox.Anchor = 'Bottom, Right, Left, Top'
 $GroupBox.Left = 20
 $GroupBox.Width = $WingetUpdateForm.Width - 50
@@ -303,7 +323,7 @@ function GetWingetUpdates {
 
 # Add The Elements To The Form
 $WingetUpdateForm.Controls.AddRange(@(
-        $Title, $Description, $UpdateButton, $UpdateStatus, <# $Gif,#> $SelectAll, 
+        $tabControl, $Title, $Description, $UpdateButton, $UpdateStatus, <# $Gif,#> $SelectAll, 
         $ShowUndetermined, $ListAllPackages, $WaitAfterDone, $UpgradeButton, $GroupBox
     ))
 
