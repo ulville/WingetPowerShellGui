@@ -13,6 +13,7 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 . "$PSScriptRoot\WinGetPackageInfoWindow.ps1"
+. "$PSScriptRoot\ControlDefinitions.ps1"
 
 $WinGetPSGUIDataDir = "$env:APPDATA\WinGetPowerShellGui\"
 if (-not (Test-Path -Path $WinGetPSGUIDataDir -PathType Container)) {
@@ -33,95 +34,70 @@ $hWnd = [Foo.ConsoleUtils]::GetConsoleWindow()
 [Windows.Forms.Application]::EnableVisualStyles()
 
 # Create a new form
-$WingetUpdateForm = New-Object system.Windows.Forms.Form
-
-# Define the size and title
-$WingetUpdateForm.ClientSize = '566,550'
-$WingetUpdateForm.Text = "Ulvican Kahya - Winget Update Gui"
-$WingetUpdateForm.StartPosition = "CenterScreen"
-$WingetUpdateForm.Add_Shown({ WingetUpdateForm_OnShown })
+$MainForm = NewMainForm
+$MainForm.Add_Shown({ MainForm_OnShown })
 
 # ELEMENT DEFINITIONS
+$tabControl = NewTabControl
 
-$tabControl = New-Object System.Windows.Forms.TabControl
-$tabControl.Dock = "Top"
-$tabControl.Height = 124
+$tabPageExplore = NewTabPage "Explore"
+$tabPageInstalled = NewTabPage "Installed"
+$tabPageUpdates = NewTabPage "Updates"
 
-$tabPageExplore = New-Object System.Windows.Forms.TabPage
-$tabPageExplore.Text = "Explore"
-$tabPageExplore.UseVisualStyleBackColor = $true
 $tabControl.Controls.Add($tabPageExplore)
-
-$tabPageInstalled = New-Object System.Windows.Forms.TabPage
-$tabPageInstalled.Text = "Installed"
-$tabPageInstalled.UseVisualStyleBackColor = $true
 $tabControl.Controls.Add($tabPageInstalled)
-
-$tabPageUpdates = New-Object System.Windows.Forms.TabPage
-$tabPageUpdates.Text = "Updates"
-$tabPageUpdates.UseVisualStyleBackColor = $true
 $tabControl.Controls.Add($tabPageUpdates)
 
-# Title Label
-$Title = New-Object system.Windows.Forms.Label
-$Title.text = "Winget Update GUI"
-$Title.AutoSize = $true
-$Title.width = 25
-$Title.height = 10
-$Title.location = New-Object System.Drawing.Point(20, 20)
-$Title.Font = 'Segoe UI,13'
+$bottomPanel = NewPanel "Bottom" "#ff0000" 60
+$fillingPanel = NewPanel "Fill" "#887657"
 
-# Description Text
-$Description = New-Object system.Windows.Forms.Label
-$Description.text = "Click the button below to get upgradable packages."
-$Description.AutoSize = $false
-$Description.width = 350
-$Description.height = 20
-$Description.location = New-Object System.Drawing.Point(20, 50)
-$Description.Font = 'Segoe UI,10'
+$searchButton = NewButton "Search" -anchor "Top, Right" -dock "Right"
+$searchBox = NewTextBox -dock "Left" -width 100 -anchor "Left, Right"
+$searchPanel = NewPanel "Top" "#00ff00" $searchBox.Height # Bunu TableLayout yap
+$searchPanel.Controls.AddRange(@($searchBox, $searchButton))
+
+$filterPanel = NewPanel "Fill" "#ff00ff"
+
+$tabPageExplore.Controls.AddRange(@($searchPanel, $filterPanel))
 
 # Button to Update Package List
-$UpdateButton = New-Object System.Windows.Forms.Button
-$UpdateButton.Text = "Update"
-$UpdateButton.width = 90
-$UpdateButton.height = 30
-$UpdateButton.Location = New-Object System.Drawing.Point(20, 85)
-$UpdateButton.Font = 'Segoe UI,10'
-$UpdateButton.Add_Click({ GetWingetUpdates })
-$UpdateButton.Remove_Click({ GetWingetUpdates })
+# $UpdateButton = New-Object System.Windows.Forms.Button
+# $UpdateButton.Text = "Update"
+# $UpdateButton.width = 90
+# $UpdateButton.height = 30
+# $UpdateButton.Location = New-Object System.Drawing.Point(20, 85)
+# $UpdateButton.Font = 'Segoe UI,10'
+# $UpdateButton.Add_Click({ GetWingetUpdates })
+# $UpdateButton.Remove_Click({ GetWingetUpdates })
 
 #### DEBUG BUTTON
 # $DebugBreak = New-Object System.Windows.Forms.Button
 # $DebugBreak.Text = "Debug Break"
-# $DebugBreak.Location = New-Object System.Drawing.Point(($WingetUpdateForm.Width - 220), ($WingetUpdateForm.Height - 90))
+# $DebugBreak.Location = New-Object System.Drawing.Point(($MainForm.Width - 220), ($MainForm.Height - 90))
 # $DebugBreak.Add_Click({DebugBreakFunc})
 # $DebugBreak.Anchor = 'Bottom, Right'
 # function DebugBreakFunc {
 #     Write-Host "" # PUT BreakPoint Here!
 # }
-# $WingetUpdateForm.controls.Add($DebugBreak)
+# $MainForm.controls.Add($DebugBreak)
 #### DEBUG BUTTON END
 
 # Accept Button. Start Upgrading Selected Packeges or as OK like when nothing is selected or nothing has to be upgraded
-$UpgradeButton = New-Object System.Windows.Forms.Button
-$UpgradeButton.Text = "Upgrade"
-$UpgradeButton.Location = New-Object System.Drawing.Point(
-    ($WingetUpdateForm.Width - 120), ($WingetUpdateForm.Height - 90))
-$UpgradeButton.width = 90
-$UpgradeButton.height = 30
-$UpgradeButton.Font = 'Segoe UI,10'
-$UpgradeButton.Anchor = "Bottom, Right"
-$UpgradeButton.DialogResult = [Windows.Forms.DialogResult]::OK
-$UpgradeButton.Visible = $false
-$WingetUpdateForm.AcceptButton = $UpgradeButton
+# $UpgradeButton = New-Object System.Windows.Forms.Button
+# $UpgradeButton.Text = "Upgrade"
+# $UpgradeButton.Location = New-Object System.Drawing.Point(
+#     ($MainForm.Width - 120), ($MainForm.Height - 90))
+# $UpgradeButton.width = 90
+# $UpgradeButton.height = 30
+# $UpgradeButton.Font = 'Segoe UI,10'
+# $UpgradeButton.Anchor = "Bottom, Right"
+# $UpgradeButton.DialogResult = [Windows.Forms.DialogResult]::OK
+# $MainForm.AcceptButton = $UpgradeButton
 
 # Status Text
-$UpdateStatus = New-Object system.Windows.Forms.Label
-$UpdateStatus.text = "Searching for updates..."
-$UpdateStatus.AutoSize = $true
-$UpdateStatus.location = New-Object System.Drawing.Point(20, 140)
+$UpdateStatus = NewLabel -text "Searching for updates..." -x 20 -y 140 -autosize
 $UpdateStatus.Font = 'Segoe UI,10'
-$UpdateStatus.Visible = $false
+
 
 # General Settings Checkboxes
 $ListAllPackages = New-Object System.Windows.Forms.CheckBox
@@ -156,8 +132,8 @@ $GroupBox = New-Object System.Windows.Forms.GroupBox
 $GroupBox.Dock = "Top"
 $GroupBox.Anchor = 'Bottom, Right, Left, Top'
 $GroupBox.Left = 20
-$GroupBox.Width = $WingetUpdateForm.Width - 50
-$GroupBox.Height = $WingetUpdateForm.Height - $GroupBox.Top - 250
+$GroupBox.Width = $MainForm.Width - 50
+$GroupBox.Height = $MainForm.Height - $GroupBox.Top - 250
 $GroupBox.Top = $UpdateStatus.Top
 $GroupBox.Text = "Available Updates"
 $GroupBox.Font = New-Object System.Drawing.Font(
@@ -165,35 +141,11 @@ $GroupBox.Font = New-Object System.Drawing.Font(
     [System.Drawing.FontStyle]::Bold
 )
 
-# Loader Animation
-# $Gif                            = New-Object System.Windows.Forms.PictureBox
-# $Gif.ImageLocation              = "C:\Users\ulvican\Downloads\301.gif"
-# $Gif.AutoSize                   = $true
-# $Gif.Location                   = New-Object System.Drawing.Point((($WingetUpdateForm.ClientSize.Width / 2) - ($Gif.Width / 2)) , 260)
-# $Gif.Anchor                     = "Top"
-# $Gif.Visible                    = $false
-
 # Loader ProgressBar
-$ProgressBar = New-Object System.Windows.Forms.ProgressBar
-$ProgressBar.Style = "Marquee"
-$ProgressBar.Dock = "Bottom"
-$ProgressBar.Enabled = $false
-$ProgressBar.Visible = $false
-$ProgressBar.MarqueeAnimationSpeed = 17
+$ProgressBar = NewProgressBar
 
 # ListView
-$ListView = New-Object System.Windows.Forms.ListView
-$ListView.Dock = "Fill"
-$ListView.Text = "Available Updates"
-$ListView.Font = New-Object System.Drawing.Font('Segoe UI', 10)
-$ListView.CheckBoxes = $true
-$ListView.View = "Details"
-# $ListView.GridLines             = $true
-$ListView.FullRowSelect = $true
-$ListView.Columns.Add("Id"          , -2) | Out-Null
-$ListView.Columns.Add("Name"        , -2) | Out-Null
-$ListView.Columns.Add("Version"     , -2) | Out-Null
-$ListView.Columns.Add("Available"   , -2) | Out-Null
+$ListView = NewListView
 $ListView.Add_MouseDown({ ListView_OnMouseDown })
 
 # Text Which Shows Up When No Upgrades Are Available
@@ -243,7 +195,7 @@ $GetInstalledPackages =
     $packageList
 }
 
-function WingetUpdateForm_OnShown {
+function MainForm_OnShown {
     PopulateListView
 }
 
@@ -322,13 +274,13 @@ function GetWingetUpdates {
 
 
 # Add The Elements To The Form
-$WingetUpdateForm.Controls.AddRange(@(
-        $tabControl, $Title, $Description, $UpdateButton, $UpdateStatus, <# $Gif,#> $SelectAll, 
+$MainForm.Controls.AddRange(@(
+        $tabControl, $bottomPanel, $fillingPanel, <# $Title,  $Description, #>$UpdateButton, $UpdateStatus, <# $Gif,#> $SelectAll, 
         $ShowUndetermined, $ListAllPackages, $WaitAfterDone, $UpgradeButton, $GroupBox
     ))
 
 # Display The Form
-$formResult = $WingetUpdateForm.ShowDialog()
+$formResult = $MainForm.ShowDialog()
 
 # These Will Run After The Form Is Closed
 
