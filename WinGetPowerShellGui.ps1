@@ -93,7 +93,7 @@ $UpgradeButton.height = 30
 $UpgradeButton.Font = 'Segoe UI,10'
 $UpgradeButton.Anchor = "Bottom, Right"
 $UpgradeButton.DialogResult = [Windows.Forms.DialogResult]::OK
-$UpgradeButton.Visible = $false
+# $UpgradeButton.Visible = $false
 $WingetUpdateForm.AcceptButton = $UpgradeButton
 
 # Status Text
