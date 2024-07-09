@@ -51,12 +51,13 @@ $tabControl.Controls.Add($tabPageUpdates)
 $bottomPanel = NewPanel "Bottom" "#ff0000" 60
 $fillingPanel = NewPanel "Fill" "#887657"
 
-$searchButton = NewButton "Search" -anchor "Top, Right" -dock "Right"
-$searchBox = NewTextBox -dock "Left" -width 100 -anchor "Left, Right"
-$searchPanel = NewPanel "Top" "#00ff00" $searchBox.Height # Bunu TableLayout yap
+$searchButton = NewButton "Search"
+$searchBox = NewTextBox -dock "Fill"
+$searchPanel = NewSearchPanel "Top" "#00ff00"
 $searchPanel.Controls.AddRange(@($searchBox, $searchButton))
 
-$filterPanel = NewPanel "Fill" "#ff00ff"
+$filterPanel = NewFilterPanel "Fill" "#ff00ff"
+$sourceLabel = NewLabel "Source:" -autosize
 
 $tabPageExplore.Controls.AddRange(@($searchPanel, $filterPanel))
 
@@ -95,7 +96,7 @@ $tabPageExplore.Controls.AddRange(@($searchPanel, $filterPanel))
 # $MainForm.AcceptButton = $UpgradeButton
 
 # Status Text
-$UpdateStatus = NewLabel -text "Searching for updates..." -x 20 -y 140 -autosize
+$UpdateStatus = NewLabel -text "Searching for updates..." -location -x 20 -y 140 -autosize
 $UpdateStatus.Font = 'Segoe UI,10'
 
 
@@ -229,11 +230,11 @@ function PopulateListView {
     }
 
     if ($PackagesToShow.Length -eq 0) {
-        $UpgradeButton.Text = "OK"
+        # $UpgradeButton.Text = "OK"
         $GroupBox.Controls.Add($lbAllGood)
     }
     else {
-        $UpgradeButton.Text = "Upgrade"
+        # $UpgradeButton.Text = "Upgrade"
         $GroupBox.Controls.Add($ListView)
         foreach ($Column in $ListView.Columns) {
             $Column.AutoResize("ColumnContent")
@@ -246,7 +247,7 @@ function PopulateListView {
 function GetWingetUpdates {
 
     $UpdateButton.Enabled = $false
-    $UpgradeButton.Enabled = $false
+    # $UpgradeButton.Enabled = $false
     
 
     $GroupBox.Controls.Clear()
@@ -265,8 +266,8 @@ function GetWingetUpdates {
     $ProgressBar.Enabled = $false
     $ProgressBar.Visible = $false
     $UpdateButton.Enabled = $true
-    $UpgradeButton.Enabled = $true
-    $UpgradeButton.Visible = $true
+    # $UpgradeButton.Enabled = $true
+    # $UpgradeButton.Visible = $true
     
     PopulateListView
 
@@ -276,7 +277,7 @@ function GetWingetUpdates {
 # Add The Elements To The Form
 $MainForm.Controls.AddRange(@(
         $tabControl, $bottomPanel, $fillingPanel, <# $Title,  $Description, #>$UpdateButton, $UpdateStatus, <# $Gif,#> $SelectAll, 
-        $ShowUndetermined, $ListAllPackages, $WaitAfterDone, $UpgradeButton, $GroupBox
+        $ShowUndetermined, $ListAllPackages, $WaitAfterDone, <# $UpgradeButton, #> $GroupBox
     ))
 
 # Display The Form

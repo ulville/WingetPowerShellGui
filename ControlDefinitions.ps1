@@ -35,6 +35,60 @@ function NewPanel ($dock, $bgcolor, $height) {
     $panel
 }
 
+function NewSearchPanel {
+    param (
+        $dock,
+        $bgcolor,
+        $height
+    )
+    $tlPanel = New-Object System.Windows.Forms.TableLayoutPanel
+    $tlPanel.Dock = $dock
+    $tlPanel.BackColor = $bgcolor
+    $tlPanel.ColumnCount = 2
+    if ($height) {
+        $tlPanel.Height = $height
+    }
+    
+    $tlPanel.ColumnStyles.Add((
+            New-Object System.Windows.Forms.ColumnStyle("Percent", 100.0)
+        )) | Out-Null
+    $tlPanel.ColumnStyles.Add((
+            New-Object System.Windows.Forms.ColumnStyle
+        )) | Out-Null
+    
+    $tlPanel
+}
+
+function NewFilterPanel {
+    param (
+        $dock,
+        $bgcolor,
+        $height
+    )
+    $tlPanel = New-Object System.Windows.Forms.TableLayoutPanel
+    $tlPanel.Dock = $dock
+    $tlPanel.BackColor = $bgcolor
+    $tlPanel.ColumnCount = 4
+    if ($height) {
+        $tlPanel.Height = $height
+    }
+    
+    $tlPanel.ColumnStyles.Add((
+            New-Object System.Windows.Forms.ColumnStyle("Percent", 25.0)
+        )) | Out-Null
+    $tlPanel.ColumnStyles.Add((
+            New-Object System.Windows.Forms.ColumnStyle("Percent", 25.0)
+        )) | Out-Null
+    $tlPanel.ColumnStyles.Add((
+            New-Object System.Windows.Forms.ColumnStyle("Percent", 25.0)
+        )) | Out-Null
+    $tlPanel.ColumnStyles.Add((
+            New-Object System.Windows.Forms.ColumnStyle("Percent", 25.0)
+        )) | Out-Null
+    
+    $tlPanel
+}
+
 function NewButton ($text, $width, $height, $anchor, $dock) {
     $button = New-Object System.Windows.Forms.Button
     $button.Text = $text
@@ -56,6 +110,7 @@ function NewButton ($text, $width, $height, $anchor, $dock) {
 function NewLabel {
     param (
         [string]$text,
+        [switch]$location,
         [int]$x,
         [int]$y,
         [switch]$autosize
@@ -68,7 +123,10 @@ function NewLabel {
     else {
         $label.AutoSize = $false
     }
-    $label.Location = New-Object System.Drawing.Point($x, $y)
+    if ($location) {
+        
+        $label.Location = New-Object System.Drawing.Point($x, $y)
+    }
     $label
 }
 
@@ -104,7 +162,8 @@ function NewTextBox ($dock, $anchor, $width) {
     if ($anchor) {
         $textBox.Anchor = $anchor
     }
-    $textBox.Width = $width
-    $textBox.AutoSize = $true
+    if ($width) {
+        $textBox.Width = $width
+    }
     $textBox
 }
