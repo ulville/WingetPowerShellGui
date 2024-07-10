@@ -4,7 +4,7 @@ Add-Type -AssemblyName System.Drawing
 function NewMainForm() {
     $MainForm = New-Object system.Windows.Forms.Form
     $MainForm.ClientSize = '566,550'
-    $MainForm.Text = "Ulvican Kahya - Winget Update Gui"
+    $MainForm.Text = "WinGet Powershell GUI"
     $MainForm.StartPosition = "CenterScreen"
     # $MainForm.Padding = 12
     $MainForm
@@ -13,7 +13,8 @@ function NewMainForm() {
 function NewTabControl() {
     $tabControl = New-Object System.Windows.Forms.TabControl
     $tabControl.Dock = "Top"
-    $tabControl.Height = 124
+    $tabControl.Height = 142
+    $tabControl.Padding = "18, 6"
     $tabControl
 }
 
@@ -25,73 +26,92 @@ function NewTabPage ([string]$text) {
     $tabPage
 }
 
-function NewPanel ($dock, $bgcolor, $height) {
+function NewPanel ($dock, $bgcolor, $height, $padding) {
     $panel = New-Object System.Windows.Forms.Panel
     $panel.Dock = $dock
     $panel.BackColor = $bgcolor
     if ($height) {
         $panel.Height = $height
     }
+    if ($padding) {
+        $panel.Padding = $padding
+    }
     $panel
+}
+
+function NewSizeLimitedPanel {
+    param (
+        $maxWidth
+    )
+    $sizeLimPanel = New-Object System.Windows.Forms.Panel
+    $sizeLimPanel.Anchor = "Top, Bottom, Left, Right"
+    $sizeLimPanel.AutoSize = $true
+    $sizeLimPanel.Padding = 6
+    $sizeLimPanel.MaximumSize = New-Object System.Drawing.Size($maxWidth, 0)
+    $sizeLimPanel.BackColor = "#ff0000"
+    $sizeLimPanel
 }
 
 function NewSearchPanel {
     param (
-        $dock,
-        $bgcolor,
         $height
     )
     $tlPanel = New-Object System.Windows.Forms.TableLayoutPanel
-    $tlPanel.Dock = $dock
-    $tlPanel.BackColor = $bgcolor
+    $tlPanel.AutoSize = $true
     $tlPanel.ColumnCount = 2
-    if ($height) {
-        $tlPanel.Height = $height
-    }
-    
     $tlPanel.ColumnStyles.Add((
             New-Object System.Windows.Forms.ColumnStyle("Percent", 100.0)
         )) | Out-Null
     $tlPanel.ColumnStyles.Add((
             New-Object System.Windows.Forms.ColumnStyle
         )) | Out-Null
+    $tlPanel.Dock = "Top"
+    $tlPanel.Padding = "6, 5, 6, 5"
+    if ($height) {
+        $tlPanel.Height = $height
+    }
+    
+    $tlPanel.BackColor = "#00ff00"
     
     $tlPanel
 }
 
 function NewFilterPanel {
     param (
-        $dock,
-        $bgcolor,
         $height
     )
+
     $tlPanel = New-Object System.Windows.Forms.TableLayoutPanel
-    $tlPanel.Dock = $dock
-    $tlPanel.BackColor = $bgcolor
-    $tlPanel.ColumnCount = 4
+    $tlPanel.AutoSize = $true
+    $tlPanel.ColumnCount = 2
+    $tlPanel.ColumnStyles.Add((
+            New-Object System.Windows.Forms.ColumnStyle("Percent", 50.0)
+        )) | Out-Null
+    $tlPanel.ColumnStyles.Add((
+            New-Object System.Windows.Forms.ColumnStyle("Percent", 50.0)
+        )) | Out-Null
+    $tlPanel.Dock = "Top"
+    $tlPanel.Padding = "6, 0, 6, 5"
+    $tlPanel.RowCount = 2
+    $tlPanel.RowStyles.Add((
+            New-Object System.Windows.Forms.RowStyle
+        )) | Out-Null
+    $tlPanel.RowStyles.Add((
+            New-Object System.Windows.Forms.RowStyle("Percent", 100.0)
+        )) | Out-Null
     if ($height) {
         $tlPanel.Height = $height
     }
-    
-    $tlPanel.ColumnStyles.Add((
-            New-Object System.Windows.Forms.ColumnStyle("Percent", 25.0)
-        )) | Out-Null
-    $tlPanel.ColumnStyles.Add((
-            New-Object System.Windows.Forms.ColumnStyle("Percent", 25.0)
-        )) | Out-Null
-    $tlPanel.ColumnStyles.Add((
-            New-Object System.Windows.Forms.ColumnStyle("Percent", 25.0)
-        )) | Out-Null
-    $tlPanel.ColumnStyles.Add((
-            New-Object System.Windows.Forms.ColumnStyle("Percent", 25.0)
-        )) | Out-Null
+
+    $tlPanel.BackColor = "#ff00ff"
     
     $tlPanel
 }
 
-function NewButton ($text, $width, $height, $anchor, $dock) {
+function NewButton ($text, $width, $height, $anchor, $dock, $margin) {
     $button = New-Object System.Windows.Forms.Button
     $button.Text = $text
+    # $button.AutoSize = $true
     if ($width) {
         $button.Width = $width
     }
@@ -103,7 +123,11 @@ function NewButton ($text, $width, $height, $anchor, $dock) {
     }
     if ($dock) {
         $button.Dock = $dock
+    }    
+    if ($margin) {
+        $button.Margin = $margin
     }
+    $button.UseVisualStyleBackColor = $true
     $button
 }
 
@@ -154,7 +178,7 @@ function NewListView {
     $ListView
 }
 
-function NewTextBox ($dock, $anchor, $width) {
+function NewTextBox ($dock, $anchor, $width, $padding, $margin) {
     $textBox = New-Object System.Windows.Forms.TextBox
     if ($dock) {
         $textBox.Dock = $dock
@@ -165,5 +189,16 @@ function NewTextBox ($dock, $anchor, $width) {
     if ($width) {
         $textBox.Width = $width
     }
+    if ($margin) {
+        $textBox.Margin = $margin
+    }
     $textBox
+}
+
+function NewComboBox ($items) {
+    $comboBox = New-Object System.Windows.Forms.ComboBox
+    $comboBox.Dock = "Top"
+    $comboBox.Padding = "3, 3, 6, 3"
+    $comboBox.Items.AddRange($items)
+    $comboBox
 }

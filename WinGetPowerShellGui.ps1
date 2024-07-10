@@ -35,31 +35,74 @@ $hWnd = [Foo.ConsoleUtils]::GetConsoleWindow()
 
 # Create a new form
 $MainForm = NewMainForm
-$MainForm.Add_Shown({ MainForm_OnShown })
+# $MainForm.Add_Shown({ MainForm_OnShown })
 
 # ELEMENT DEFINITIONS
+
 $tabControl = NewTabControl
 
-$tabPageExplore = NewTabPage "Explore"
-$tabPageInstalled = NewTabPage "Installed"
-$tabPageUpdates = NewTabPage "Updates"
+$exploreTabPage = NewTabPage "Explore"
+$installedTabPage = NewTabPage "Installed"
+$updatesTabPage = NewTabPage "Updates"
 
-$tabControl.Controls.Add($tabPageExplore)
-$tabControl.Controls.Add($tabPageInstalled)
-$tabControl.Controls.Add($tabPageUpdates)
-
+$tabControl.Controls.Add($exploreTabPage)
+$tabControl.Controls.Add($installedTabPage)
+$tabControl.Controls.Add($updatesTabPage)
+##
+## bottomPanel
+##
 $bottomPanel = NewPanel "Bottom" "#ff0000" 60
-$fillingPanel = NewPanel "Fill" "#887657"
 
-$searchButton = NewButton "Search"
-$searchBox = NewTextBox -dock "Fill"
-$searchPanel = NewSearchPanel "Top" "#00ff00"
+###################
+## Filling Panel ##
+################################################################
+$fillingPanel = NewPanel "Fill" "#887657" -padding 12
+################################################################
+
+$searchBox = NewTextBox -dock "Fill" -margin "3, 4, 6, 3"
+$searchButton = NewButton "Search" -margin "3, 3, 6, 3" -height 25
+
+$filterPanel = NewFilterPanel
+$searchPanel = NewSearchPanel
 $searchPanel.Controls.AddRange(@($searchBox, $searchButton))
 
-$filterPanel = NewFilterPanel "Fill" "#ff00ff"
-$sourceLabel = NewLabel "Source:" -autosize
 
-$tabPageExplore.Controls.AddRange(@($searchPanel, $filterPanel))
+$sourceLabel = NewLabel "Source:" -autosize
+$searchByLabel = NewLabel "Search By:" -autosize
+$sourceComboBox = NewComboBox @("All", "winget", "msstore", "other")
+$searchByComboBox = NewComboBox @("Anything", "Id", "Name", "Moniker")
+
+$filterPanel.Controls.Add($sourceLabel, 0, 0)
+$filterPanel.Controls.Add($searchByLabel, 1, 0)
+$filterPanel.Controls.Add($sourceComboBox, 0, 1)
+$filterPanel.Controls.Add($searchByComboBox, 1, 1)
+
+$explorePanel = NewSizeLimitedPanel 800
+$explorePanel.Controls.Add($filterPanel)
+$explorePanel.Controls.Add($searchPanel)
+
+$exploreTabPage.Controls.Add($explorePanel)
+
+$searchButton.Add_Click({ Search_Click })
+
+# ListView
+$ListView = NewListView
+$ListView.Add_MouseDown({ ListView_OnMouseDown })
+
+$fillingPanel.Controls.Add($ListView)
+
+$MainForm.Controls.AddRange(@(
+        $fillingPanel, $tabControl, $bottomPanel))
+
+
+function Search_Click {
+    $res = Find-WinGetPackage -Query "$($searchBox.Text)"
+    FillListView $res
+}
+
+function ShowSize {
+    $searchBox.Text = "SBox: $($searchBox.Top) $($searchBox.Height) SButton: $($searchButton.Top) $($searchButton.Height)"
+}
 
 # Button to Update Package List
 # $UpdateButton = New-Object System.Windows.Forms.Button
@@ -145,9 +188,6 @@ $GroupBox.Font = New-Object System.Drawing.Font(
 # Loader ProgressBar
 $ProgressBar = NewProgressBar
 
-# ListView
-$ListView = NewListView
-$ListView.Add_MouseDown({ ListView_OnMouseDown })
 
 # Text Which Shows Up When No Upgrades Are Available
 $lbAllGood = New-Object System.Windows.Forms.Label
@@ -204,22 +244,12 @@ function ListAllPackages_OnCheckedChanged {
     PopulateListView
 }
 
-function PopulateListView {
-
-    $installedPackages = Import-Clixml -Path $InstalledPackagesLocalPath
-
-    # $updateablePackages = $installedPackages | Where-Object IsUpdateAvailable -Eq "True"
-    # $determinedUpdateablePackages = $updateablePackages | Where-Object InstalledVersion -NE "Unknown"
-    $PackagesToShow = $installedPackages
-    if ( -not $ListAllPackages.Checked) {
-        $PackagesToShow = $PackagesToShow | Where-Object IsUpdateAvailable -Eq "True"
-        if ( -not $ShowUndetermined.Checked) {
-            $PackagesToShow = $PackagesToShow | Where-Object InstalledVersion -NE "Unknown"
-        }
-    }
-    $SelectAll.Visible = $true
+function FillListView {
+    param (
+        $packages
+    )
     $ListView.Items.Clear()
-    foreach ($package in $PackagesToShow) {
+    foreach ($package in $packages) {
         $PackageItem = New-Object System.Windows.Forms.ListViewItem($package.Id)
         $PackageItem.SubItems.Add($package.Name)
         $PackageItem.SubItems.Add($package.InstalledVersion)
@@ -228,20 +258,46 @@ function PopulateListView {
         }
         $ListView.Items.Add($PackageItem)
     }
-
-    if ($PackagesToShow.Length -eq 0) {
-        # $UpgradeButton.Text = "OK"
-        $GroupBox.Controls.Add($lbAllGood)
-    }
-    else {
-        # $UpgradeButton.Text = "Upgrade"
-        $GroupBox.Controls.Add($ListView)
-        foreach ($Column in $ListView.Columns) {
-            $Column.AutoResize("ColumnContent")
-            $Column.Width += 20
-        }
-    }
 }
+
+# function PopulateListView {
+
+#     $installedPackages = Import-Clixml -Path $InstalledPackagesLocalPath
+
+#     # $updateablePackages = $installedPackages | Where-Object IsUpdateAvailable -Eq "True"
+#     # $determinedUpdateablePackages = $updateablePackages | Where-Object InstalledVersion -NE "Unknown"
+#     $PackagesToShow = $installedPackages
+#     if ( -not $ListAllPackages.Checked) {
+#         $PackagesToShow = $PackagesToShow | Where-Object IsUpdateAvailable -Eq "True"
+#         if ( -not $ShowUndetermined.Checked) {
+#             $PackagesToShow = $PackagesToShow | Where-Object InstalledVersion -NE "Unknown"
+#         }
+#     }
+#     $SelectAll.Visible = $true
+#     $ListView.Items.Clear()
+#     foreach ($package in $PackagesToShow) {
+#         $PackageItem = New-Object System.Windows.Forms.ListViewItem($package.Id)
+#         $PackageItem.SubItems.Add($package.Name)
+#         $PackageItem.SubItems.Add($package.InstalledVersion)
+#         if ($package.AvailableVersions.Count -gt 0) {
+#             $PackageItem.SubItems.Add($package.AvailableVersions[0])
+#         }
+#         $ListView.Items.Add($PackageItem)
+#     }
+
+#     if ($PackagesToShow.Length -eq 0) {
+#         # $UpgradeButton.Text = "OK"
+#         $GroupBox.Controls.Add($lbAllGood)
+#     }
+#     else {
+#         # $UpgradeButton.Text = "Upgrade"
+#         $GroupBox.Controls.Add($ListView)
+#         foreach ($Column in $ListView.Columns) {
+#             $Column.AutoResize("ColumnContent")
+#             $Column.Width += 20
+#         }
+#     }
+# }
 
 
 function GetWingetUpdates {
@@ -275,10 +331,10 @@ function GetWingetUpdates {
 
 
 # Add The Elements To The Form
-$MainForm.Controls.AddRange(@(
-        $tabControl, $bottomPanel, $fillingPanel, <# $Title,  $Description, #>$UpdateButton, $UpdateStatus, <# $Gif,#> $SelectAll, 
-        $ShowUndetermined, $ListAllPackages, $WaitAfterDone, <# $UpgradeButton, #> $GroupBox
-    ))
+# $MainForm.Controls.AddRange(@(
+#         $tabControl, $bottomPanel, $fillingPanel, <# $Title,  $Description, #>$UpdateButton, $UpdateStatus, <# $Gif,#> $SelectAll, 
+#         $ShowUndetermined, $ListAllPackages, $WaitAfterDone, <# $UpgradeButton, #> $GroupBox
+#     ))
 
 # Display The Form
 $formResult = $MainForm.ShowDialog()
