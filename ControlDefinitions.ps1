@@ -29,7 +29,9 @@ function NewTabPage ([string]$text) {
 function NewPanel ($dock, $bgcolor, $height, $padding) {
     $panel = New-Object System.Windows.Forms.Panel
     $panel.Dock = $dock
-    $panel.BackColor = $bgcolor
+    if ($bgcolor) {
+        $panel.BackColor = $bgcolor
+    }
     if ($height) {
         $panel.Height = $height
     }
@@ -48,7 +50,7 @@ function NewSizeLimitedPanel {
     $sizeLimPanel.AutoSize = $true
     $sizeLimPanel.Padding = 6
     $sizeLimPanel.MaximumSize = New-Object System.Drawing.Size($maxWidth, 0)
-    $sizeLimPanel.BackColor = "#ff0000"
+    # $sizeLimPanel.BackColor = "#ff0000"
     $sizeLimPanel
 }
 
@@ -71,7 +73,7 @@ function NewSearchPanel {
         $tlPanel.Height = $height
     }
     
-    $tlPanel.BackColor = "#00ff00"
+    # $tlPanel.BackColor = "#00ff00"
     
     $tlPanel
 }
@@ -103,7 +105,31 @@ function NewFilterPanel {
         $tlPanel.Height = $height
     }
 
-    $tlPanel.BackColor = "#ff00ff"
+    # $tlPanel.BackColor = "#ff00ff"
+    
+    $tlPanel
+}
+
+function NewBottomPanel {
+    param (
+        $height
+    )
+    $tlPanel = New-Object System.Windows.Forms.TableLayoutPanel
+    $tlPanel.AutoSize = $true
+    $tlPanel.ColumnCount = 2
+    $tlPanel.ColumnStyles.Add((
+            New-Object System.Windows.Forms.ColumnStyle("Percent", 100.0)
+        )) | Out-Null
+    $tlPanel.ColumnStyles.Add((
+            New-Object System.Windows.Forms.ColumnStyle
+        )) | Out-Null
+    $tlPanel.Dock = "Bottom"
+    $tlPanel.Padding = "15, 12, 15, 12"
+    if ($height) {
+        $tlPanel.Height = $height
+    }
+    
+    # $tlPanel.BackColor = "#ff0000"
     
     $tlPanel
 }
@@ -157,8 +183,8 @@ function NewLabel {
 function NewProgressBar {
     $ProgressBar = New-Object System.Windows.Forms.ProgressBar
     $ProgressBar.Style = "Marquee"
-    $ProgressBar.Dock = "Bottom"
-    $ProgressBar.Enabled = $false
+    $ProgressBar.Dock = "Top"
+    # $ProgressBar.Enabled = $false
     $ProgressBar.Visible = $false
     $ProgressBar.MarqueeAnimationSpeed = 17
     $ProgressBar

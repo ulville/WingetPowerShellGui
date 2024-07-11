@@ -51,13 +51,35 @@ $tabControl.Controls.Add($updatesTabPage)
 ##
 ## bottomPanel
 ##
-$bottomPanel = NewPanel "Bottom" "#ff0000" 60
+$bottomPanel = NewBottomPanel
 
 ###################
 ## Filling Panel ##
 ################################################################
-$fillingPanel = NewPanel "Fill" "#887657" -padding 12
+$fillingPanel = NewPanel "Fill" -padding "12, 12, 12, 0"
 ################################################################
+
+
+## Accept Button ##
+###################
+## Accept Button. Start Upgrading Selected Packeges or as OK like when nothing is selected or nothing has to be upgraded
+# $UpgradeButton = New-Object System.Windows.Forms.Button
+# $UpgradeButton.Text = "Upgrade"
+# $UpgradeButton.Location = New-Object System.Drawing.Point(
+#     ($MainForm.Width - 120), ($MainForm.Height - 90))
+# $UpgradeButton.width = 90
+# $UpgradeButton.height = 30
+# $UpgradeButton.Font = 'Segoe UI,10'
+# $UpgradeButton.Anchor = "Bottom, Right"
+# $UpgradeButton.DialogResult = [Windows.Forms.DialogResult]::OK
+# $MainForm.AcceptButton = $UpgradeButton
+
+$AcceptButton = NewButton "Install" -height 25 -dock "Right"
+$AcceptButton.DialogResult = [Windows.Forms.DialogResult]::OK
+$MainForm.AcceptButton = $UpgradeButton
+
+$ProgressBar = NewProgressBar
+$bottomPanel.Controls.AddRange(@($ProgressBar, $AcceptButton))
 
 $searchBox = NewTextBox -dock "Fill" -margin "3, 4, 6, 3"
 $searchButton = NewButton "Search" -margin "3, 3, 6, 3" -height 25
@@ -69,7 +91,7 @@ $searchPanel.Controls.AddRange(@($searchBox, $searchButton))
 
 $sourceLabel = NewLabel "Source:" -autosize
 $searchByLabel = NewLabel "Search By:" -autosize
-$sourceComboBox = NewComboBox @("All", "winget", "msstore", "other")
+$sourceComboBox = NewComboBox @("Both", "winget", "msstore")
 $searchByComboBox = NewComboBox @("Anything", "Id", "Name", "Moniker")
 
 $filterPanel.Controls.Add($sourceLabel, 0, 0)
@@ -96,8 +118,20 @@ $MainForm.Controls.AddRange(@(
 
 
 function Search_Click {
-    $res = Find-WinGetPackage -Query "$($searchBox.Text)"
-    FillListView $res
+    $source = ""
+    if ($sourceComboBox.SelectedItem) {
+        $source = $sourceComboBox.SelectedItem.ToString()
+    }
+    $searchBy = ""
+    if ($searchByComboBox.SelectedItem) {
+        $searchBy = $searchByComboBox.SelectedItem.ToString()
+    }
+    $ProgressBar.Visible = $true
+    $jobby = Start-Job -ScriptBlock $SearchPackages -ArgumentList $searchBox.Text, $source, $searchBy
+    Do { [System.Windows.Forms.Application]::DoEvents() } Until ($jobby.State -eq "Completed")
+    $res = Get-Job | Receive-Job
+    $ProgressBar.Visible = $false
+    FillListView -type Explore -packages $res -columns @("Id", "Name", "Version", "Source")
 }
 
 function ShowSize {
@@ -126,17 +160,7 @@ function ShowSize {
 # $MainForm.controls.Add($DebugBreak)
 #### DEBUG BUTTON END
 
-# Accept Button. Start Upgrading Selected Packeges or as OK like when nothing is selected or nothing has to be upgraded
-# $UpgradeButton = New-Object System.Windows.Forms.Button
-# $UpgradeButton.Text = "Upgrade"
-# $UpgradeButton.Location = New-Object System.Drawing.Point(
-#     ($MainForm.Width - 120), ($MainForm.Height - 90))
-# $UpgradeButton.width = 90
-# $UpgradeButton.height = 30
-# $UpgradeButton.Font = 'Segoe UI,10'
-# $UpgradeButton.Anchor = "Bottom, Right"
-# $UpgradeButton.DialogResult = [Windows.Forms.DialogResult]::OK
-# $MainForm.AcceptButton = $UpgradeButton
+
 
 # Status Text
 $UpdateStatus = NewLabel -text "Searching for updates..." -location -x 20 -y 140 -autosize
@@ -185,8 +209,7 @@ $GroupBox.Font = New-Object System.Drawing.Font(
     [System.Drawing.FontStyle]::Bold
 )
 
-# Loader ProgressBar
-$ProgressBar = NewProgressBar
+
 
 
 # Text Which Shows Up When No Upgrades Are Available
@@ -236,6 +259,26 @@ $GetInstalledPackages =
     $packageList
 }
 
+$SearchPackages = 
+{
+    param(
+        $query,
+        $source,
+        $searchBy
+    )
+    switch ($searchBy) {
+        "Id" { $HashArguments = @{Id = $query } }
+        "Name" { $HashArguments = @{Name = $query } }
+        "Moniker" { $HashArguments = @{Moniker = $query } }
+        Default { $HashArguments = @{Query = $query } }
+    }
+    if ($source -and ($source -ne "Both")) {
+        $HashArguments.Add("Source", $source) 
+    }
+    $foundPackages = Find-WinGetPackage @HashArguments 
+    $foundPackages
+}
+
 function MainForm_OnShown {
     PopulateListView
 }
@@ -244,19 +287,66 @@ function ListAllPackages_OnCheckedChanged {
     PopulateListView
 }
 
+function NewListViewItem {
+    param (
+        [Parameter(Mandatory)]
+        [ValidateSet("Explore", "Installed", "Update")]
+        [string]$type,
+        [Parameter(Mandatory)]
+        $package
+    )
+    # Column 0 : Id
+    $Item = New-Object System.Windows.Forms.ListViewItem($package.Id)
+    # Column 1 : Name
+    $Item.SubItems.Add($package.Name) | Out-Null
+
+    if ("Explore" -eq $type) { 
+        # Column 2 : Version (Latest)
+        $Item.SubItems.Add($package.Version) | Out-Null
+        # Column 3 : Source
+        $Item.SubItems.Add($package.Source) | Out-Null
+    }
+    if (("Installed" -eq $type) -or ("Update" -eq $type)) {
+        # Column 2 : Version (Installed)
+        $Item.SubItems.Add($package.InstalledVersion) | Out-Null
+        #Column 3 : Last Available Version
+        if ($package.AvailableVersions.Count -gt 0) {
+            $Item.SubItems.Add($package.AvailableVersions[0]) | Out-Null
+        }
+        else {
+            $Item.SubItems.Add("") | Out-Null
+        }
+        # Column 4 : Source
+        if ($package.Source) {
+            $Item.SubItems.Add($package.Source) | Out-Null
+        }
+    }
+
+    $Item
+}
+
 function FillListView {
     param (
-        $packages
+        [Parameter(Mandatory)]
+        [ValidateSet("Explore", "Installed", "Update")]
+        [string]$type,
+        $packages,
+        [array]$columns
     )
     $ListView.Items.Clear()
+    $ListView.Columns.Clear()
+
+    foreach ($column in $columns) {
+        $ListView.Columns.Add($column, -2) | Out-Null
+    }
+
     foreach ($package in $packages) {
-        $PackageItem = New-Object System.Windows.Forms.ListViewItem($package.Id)
-        $PackageItem.SubItems.Add($package.Name)
-        $PackageItem.SubItems.Add($package.InstalledVersion)
-        if ($package.AvailableVersions.Count -gt 0) {
-            $PackageItem.SubItems.Add($package.AvailableVersions[0])
-        }
+        $PackageItem = NewListViewItem -type $type -package $package
         $ListView.Items.Add($PackageItem)
+    }
+    foreach ($Column in $ListView.Columns) {
+        $Column.AutoResize("ColumnContent")
+        $Column.Width += 20
     }
 }
 
@@ -344,15 +434,20 @@ $formResult = $MainForm.ShowDialog()
 [Foo.ConsoleUtils]::ShowWindow($hWnd, $show) | Out-Null
 
 if ($formResult -eq [Windows.Forms.DialogResult]::OK) {
+    switch ($AcceptButton.Text) {
+        "Install" {
+            
+        }
+        "Uninstall" {  }
+        "Upgrade" {  }
+        Default {}
+    }
     if ($ListView.CheckedItems.Count -eq 0) {
         Write-Host "Nothing has selected"
         return
     }
-    elseif ($ListView.Items.Count -eq $ListView.CheckedItems.Count) {
-        $SP = "--all"
-    }
     else {
-        $SP = GetSelectedPackageIDs
+        $SP = ($ListView.SelectedItems | ForEach-Object { $_.Text })
     }
     Write-Host "> sudo winget upgrade $SP"
     sudo winget upgrade $SP
