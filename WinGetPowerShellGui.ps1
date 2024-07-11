@@ -434,26 +434,24 @@ $formResult = $MainForm.ShowDialog()
 [Foo.ConsoleUtils]::ShowWindow($hWnd, $show) | Out-Null
 
 if ($formResult -eq [Windows.Forms.DialogResult]::OK) {
-    switch ($AcceptButton.Text) {
-        "Install" {
-            
-        }
-        "Uninstall" {  }
-        "Upgrade" {  }
-        Default {}
-    }
     if ($ListView.CheckedItems.Count -eq 0) {
         Write-Host "Nothing has selected"
         return
     }
     else {
-        $SP = ($ListView.SelectedItems | ForEach-Object { $_.Text })
+        $SelectedPacks = ($ListView.CheckedItems | ForEach-Object { $_.Text })
     }
-    Write-Host "> sudo winget upgrade $SP"
-    sudo winget upgrade $SP
-    if ($WaitAfterDone.Checked) {
-        Read-Host "Upgrading finished. Press Enter to Exit"
+    switch ($AcceptButton.Text) {
+        "Install" { $subcommand = "install" }
+        "Uninstall" { $subcommand = "uninstall" }
+        "Upgrade" { $subcommand = "upgrade" }
+        Default {}
     }
+    Write-Host "> sudo winget $subcommand $SelectedPacks"
+    sudo winget $subcommand $SelectedPacks
+    # if ($WaitAfterDone.Checked) {
+    Read-Host "Process finished. Press Enter to Exit"
+    # }
 }
 else {
     Write-Host "Cancelled"
