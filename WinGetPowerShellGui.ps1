@@ -87,7 +87,7 @@ function searchBox_KeyDown {
     if ($_.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
         $searchBox.Multiline = $true
         Search_Click
-        $searchBox.Multiline = $true
+        $searchBox.Multiline = $false
         # $_.Handled = $true
         # $_.SuppressKeyPress = $true
     }
