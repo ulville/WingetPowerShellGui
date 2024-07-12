@@ -295,6 +295,15 @@ function ListAllPackages_OnCheckedChanged {
     PopulateListView
 }
 
+function isInstalled {
+    param (
+        $package
+    )
+    $_installedPackages = GetInstalledPackages
+    $result = ($package.Id -in $_installedPackages.Id)
+    $result
+}
+
 function NewListViewItem {
     param (
         [Parameter(Mandatory)]
@@ -313,6 +322,10 @@ function NewListViewItem {
         $Item.SubItems.Add($package.Version) | Out-Null
         # Column 3 : Source
         $Item.SubItems.Add($package.Source) | Out-Null
+        if ((IsInstalled $package)) {
+            $Item.ForeColor = [System.Drawing.SystemColors]::ActiveCaption
+        }
+
     }
     if (("Installed" -eq $type) -or ("Update" -eq $type)) {
         # Column 2 : Version (Installed)
@@ -424,7 +437,41 @@ function GetWingetUpdates {
     # $UpgradeButton.Visible = $true
     
     PopulateListView
+}
 
+function AsyncRun {
+    param (
+        [scriptblock]$ScriptBlock,
+        $ArgumentList
+    )
+    $ProgressBar.Visible = $true
+    $jobby = Start-Job -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
+    Do { [System.Windows.Forms.Application]::DoEvents() } Until ($jobby.State -eq "Completed")
+    $result = Get-Job | Receive-Job
+    $ProgressBar.Visible = $false
+    $result
+}
+
+function IsCacheAvailable {
+    Test-Path -Path $InstalledPackagesLocalPath -PathType Leaf
+}
+
+function IsCacheFresh ([double]$freshnessLimitInSecs = 60) {
+    $lastWriteTime = (Get-ChildItem $InstalledPackagesLocalPath).LastWriteTime
+    $timeDiffSec = ((Get-Date) - $lastWriteTime).TotalSeconds
+    $res = ($timeDiffSec -le $freshnessLimitInSecs)
+    $res
+}
+
+function GetInstalledPackages {
+    if ((IsCacheAvailable) -and (IsCacheFresh)) {
+        $installedPackages = Import-Clixml -Path $InstalledPackagesLocalPath
+    }
+    else {
+        $installedPackages = AsyncRun -ScriptBlock $GetInstalledPackages
+        $installedPackages | Export-Clixml -Path $InstalledPackagesLocalPath
+    }
+    $installedPackages
 }
 
 

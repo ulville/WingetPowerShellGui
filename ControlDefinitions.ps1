@@ -2,10 +2,11 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 function NewMainForm() {
-    $MainForm = New-Object system.Windows.Forms.Form
+    $MainForm = New-Object System.Windows.Forms.Form
     $MainForm.ClientSize = '566,550'
     $MainForm.Text = "WinGet Powershell GUI"
     $MainForm.StartPosition = "CenterScreen"
+    $MainForm.MinimumSize = New-Object System.Drawing.Size(320, 400)
     # $MainForm.Padding = 12
     $MainForm
 }
