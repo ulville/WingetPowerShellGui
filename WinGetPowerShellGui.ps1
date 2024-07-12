@@ -82,7 +82,18 @@ $ProgressBar = NewProgressBar
 $bottomPanel.Controls.AddRange(@($ProgressBar, $AcceptButton))
 
 $searchBox = NewTextBox -dock "Fill" -margin "3, 4, 6, 3"
+$searchBox.Add_KeyDown({ searchBox_KeyDown })
+function searchBox_KeyDown {    
+    if ($_.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
+        $searchBox.Multiline = $true
+        Search_Click
+        $searchBox.Multiline = $true
+        # $_.Handled = $true
+        # $_.SuppressKeyPress = $true
+    }
+}
 $searchButton = NewButton "Search" -margin "3, 3, 6, 3" -height 25
+$searchButton.Add_Click({ Search_Click })
 
 $filterPanel = NewFilterPanel
 $searchPanel = NewSearchPanel
@@ -105,7 +116,7 @@ $explorePanel.Controls.Add($searchPanel)
 
 $exploreTabPage.Controls.Add($explorePanel)
 
-$searchButton.Add_Click({ Search_Click })
+
 
 # ListView
 $ListView = NewListView
@@ -134,9 +145,6 @@ function Search_Click {
     FillListView -type Explore -packages $res -columns @("Id", "Name", "Version", "Source")
 }
 
-function ShowSize {
-    $searchBox.Text = "SBox: $($searchBox.Top) $($searchBox.Height) SButton: $($searchButton.Top) $($searchButton.Height)"
-}
 
 # Button to Update Package List
 # $UpdateButton = New-Object System.Windows.Forms.Button
