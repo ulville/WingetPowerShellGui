@@ -37,7 +37,7 @@ $hWnd = [Foo.ConsoleUtils]::GetConsoleWindow()
 $MainForm = NewMainForm
 # $MainForm.Add_Shown({ MainForm_OnShown })
 
-# ELEMENT DEFINITIONS
+# HIGH LEVEL ELEMENTS
 
 $tabControl = NewTabControl
 
@@ -48,38 +48,27 @@ $updatesTabPage = NewTabPage "Updates"
 $tabControl.Controls.Add($exploreTabPage)
 $tabControl.Controls.Add($installedTabPage)
 $tabControl.Controls.Add($updatesTabPage)
-##
-## bottomPanel
-##
+
 $bottomPanel = NewBottomPanel
 
-###################
-## Filling Panel ##
-################################################################
 $fillingPanel = NewPanel "Fill" -padding "12, 12, 12, 0"
-################################################################
 
-
-## Accept Button ##
-###################
-## Accept Button. Start Upgrading Selected Packeges or as OK like when nothing is selected or nothing has to be upgraded
-# $UpgradeButton = New-Object System.Windows.Forms.Button
-# $UpgradeButton.Text = "Upgrade"
-# $UpgradeButton.Location = New-Object System.Drawing.Point(
-#     ($MainForm.Width - 120), ($MainForm.Height - 90))
-# $UpgradeButton.width = 90
-# $UpgradeButton.height = 30
-# $UpgradeButton.Font = 'Segoe UI,10'
-# $UpgradeButton.Anchor = "Bottom, Right"
-# $UpgradeButton.DialogResult = [Windows.Forms.DialogResult]::OK
-# $MainForm.AcceptButton = $UpgradeButton
+# IN BOTTOM PANEL
 
 $AcceptButton = NewButton "Install" -height 25 -dock "Right"
 $AcceptButton.DialogResult = [Windows.Forms.DialogResult]::OK
-$MainForm.AcceptButton = $UpgradeButton
+# $MainForm.AcceptButton = $AcceptButton
 
 $ProgressBar = NewProgressBar
 $bottomPanel.Controls.AddRange(@($ProgressBar, $AcceptButton))
+
+# IN EXPLORE TABPAGE
+
+$explorePanel = NewSizeLimitedPanel 800
+$filterPanel = NewFilterPanel
+$searchPanel = NewSearchPanel
+
+# IN SEARCH PANEL - EXPLORE
 
 $searchBox = NewTextBox -dock "Fill" -margin "3, 4, 6, 3"
 $searchBox.Add_KeyDown({ searchBox_KeyDown })
@@ -95,10 +84,9 @@ function searchBox_KeyDown {
 $searchButton = NewButton "Search" -margin "3, 3, 6, 3" -height 25
 $searchButton.Add_Click({ Search_Click })
 
-$filterPanel = NewFilterPanel
-$searchPanel = NewSearchPanel
 $searchPanel.Controls.AddRange(@($searchBox, $searchButton))
 
+# IN FILTER PANEL - EXPLORE
 
 $sourceLabel = NewLabel "Source:" -autosize
 $searchByLabel = NewLabel "Search By:" -autosize
@@ -110,13 +98,13 @@ $filterPanel.Controls.Add($searchByLabel, 1, 0)
 $filterPanel.Controls.Add($sourceComboBox, 0, 1)
 $filterPanel.Controls.Add($searchByComboBox, 1, 1)
 
-$explorePanel = NewSizeLimitedPanel 800
+# ADD ELEMENTS TO EXPLORE PANEL/TABPAGE
+
 $explorePanel.Controls.Add($filterPanel)
 $explorePanel.Controls.Add($searchPanel)
-
 $exploreTabPage.Controls.Add($explorePanel)
 
-
+# FILLING (MID) PANEL
 
 # ListView
 $ListView = NewListView
@@ -124,26 +112,12 @@ $ListView.Add_MouseDown({ ListView_OnMouseDown })
 
 $fillingPanel.Controls.Add($ListView)
 
+# ADD SUB-CONTAINERS TO MAIN WINDOW
+
 $MainForm.Controls.AddRange(@(
         $fillingPanel, $tabControl, $bottomPanel))
 
-
-function Search_Click {
-    $source = ""
-    if ($sourceComboBox.SelectedItem) {
-        $source = $sourceComboBox.SelectedItem.ToString()
-    }
-    $searchBy = ""
-    if ($searchByComboBox.SelectedItem) {
-        $searchBy = $searchByComboBox.SelectedItem.ToString()
-    }
-    $ProgressBar.Visible = $true
-    $jobby = Start-Job -ScriptBlock $SearchPackages -ArgumentList $searchBox.Text, $source, $searchBy
-    Do { [System.Windows.Forms.Application]::DoEvents() } Until ($jobby.State -eq "Completed")
-    $res = Get-Job | Receive-Job
-    $ProgressBar.Visible = $false
-    FillListView -type Explore -packages $res -columns @("Id", "Name", "Version", "Source")
-}
+##############################################################################
 
 
 # Button to Update Package List
@@ -171,67 +145,69 @@ function Search_Click {
 
 
 # Status Text
-$UpdateStatus = NewLabel -text "Searching for updates..." -location -x 20 -y 140 -autosize
-$UpdateStatus.Font = 'Segoe UI,10'
+# $UpdateStatus = NewLabel -text "Searching for updates..." -location -x 20 -y 140 -autosize
+# $UpdateStatus.Font = 'Segoe UI,10'
 
 
 # General Settings Checkboxes
-$ListAllPackages = New-Object System.Windows.Forms.CheckBox
-$ListAllPackages.AutoSize = $true
-$ListAllPackages.Text = "List All Packages"
-$ListAllPackages.Location = New-Object System.Drawing.Point(400, 55)
-$ListAllPackages.Visible = $true
-$ListAllPackages.Add_CheckedChanged({ PopulateListView })
+# $ListAllPackages = New-Object System.Windows.Forms.CheckBox
+# $ListAllPackages.AutoSize = $true
+# $ListAllPackages.Text = "List All Packages"
+# $ListAllPackages.Location = New-Object System.Drawing.Point(400, 55)
+# $ListAllPackages.Visible = $true
+# $ListAllPackages.Add_CheckedChanged({ PopulateListView })
 
-$ShowUndetermined = New-Object System.Windows.Forms.CheckBox
-$ShowUndetermined.AutoSize = $true
-$ShowUndetermined.Text = "Show Undetermined"
-$ShowUndetermined.Location = New-Object System.Drawing.Point(400, 75)
-$ShowUndetermined.Visible = $true
-$ShowUndetermined.Add_CheckedChanged({ PopulateListView })
+# $ShowUndetermined = New-Object System.Windows.Forms.CheckBox
+# $ShowUndetermined.AutoSize = $true
+# $ShowUndetermined.Text = "Show Undetermined"
+# $ShowUndetermined.Location = New-Object System.Drawing.Point(400, 75)
+# $ShowUndetermined.Visible = $true
+# $ShowUndetermined.Add_CheckedChanged({ PopulateListView })
 
-$WaitAfterDone = New-Object System.Windows.Forms.CheckBox
-$WaitAfterDone.AutoSize = $true
-$WaitAfterDone.Text = "Wait After Done"
-$WaitAfterDone.Location = New-Object System.Drawing.Point(400, 95)
-$WaitAfterDone.Visible = $true
+# $WaitAfterDone = New-Object System.Windows.Forms.CheckBox
+# $WaitAfterDone.AutoSize = $true
+# $WaitAfterDone.Text = "Wait After Done"
+# $WaitAfterDone.Location = New-Object System.Drawing.Point(400, 95)
+# $WaitAfterDone.Visible = $true
 
-$SelectAll = New-Object System.Windows.Forms.CheckBox
-$SelectAll.AutoSize = $true
-$SelectAll.Text = "Select All"
-$SelectAll.Location = New-Object System.Drawing.Point(400, 115)
-$SelectAll.Visible = $false
-$SelectAll.Add_Click({ SelectAll_OnClick })
+# $SelectAll = New-Object System.Windows.Forms.CheckBox
+# $SelectAll.AutoSize = $true
+# $SelectAll.Text = "Select All"
+# $SelectAll.Location = New-Object System.Drawing.Point(400, 115)
+# $SelectAll.Visible = $false
+# $SelectAll.Add_Click({ SelectAll_OnClick })
 
 # GroupBox
-$GroupBox = New-Object System.Windows.Forms.GroupBox
-$GroupBox.Dock = "Top"
-$GroupBox.Anchor = 'Bottom, Right, Left, Top'
-$GroupBox.Left = 20
-$GroupBox.Width = $MainForm.Width - 50
-$GroupBox.Height = $MainForm.Height - $GroupBox.Top - 250
-$GroupBox.Top = $UpdateStatus.Top
-$GroupBox.Text = "Available Updates"
-$GroupBox.Font = New-Object System.Drawing.Font(
-    'Segoe UI', 10, 
-    [System.Drawing.FontStyle]::Bold
-)
+# $GroupBox = New-Object System.Windows.Forms.GroupBox
+# $GroupBox.Dock = "Top"
+# $GroupBox.Anchor = 'Bottom, Right, Left, Top'
+# $GroupBox.Left = 20
+# $GroupBox.Width = $MainForm.Width - 50
+# $GroupBox.Height = $MainForm.Height - $GroupBox.Top - 250
+# $GroupBox.Top = $UpdateStatus.Top
+# $GroupBox.Text = "Available Updates"
+# $GroupBox.Font = New-Object System.Drawing.Font(
+#     'Segoe UI', 10, 
+#     [System.Drawing.FontStyle]::Bold
+# )
 
 
 
 
 # Text Which Shows Up When No Upgrades Are Available
-$lbAllGood = New-Object System.Windows.Forms.Label
-$lbAllGood.Text = "✔️ Packages are up to date"
-$lbAllGood.AutoSize = $false
-$lbAllGood.TextAlign = "MiddleCenter"
-$lbAllGood.Dock = "Fill"
-$lbAllGood.Font = New-Object System.Drawing.Font("Segoe UI Emoji", 24 , [System.Drawing.FontStyle]::Bold)
-$lbAllGood.ForeColor = "#aaaaaa"
+# $lbAllGood = New-Object System.Windows.Forms.Label
+# $lbAllGood.Text = "✔️ Packages are up to date"
+# $lbAllGood.AutoSize = $false
+# $lbAllGood.TextAlign = "MiddleCenter"
+# $lbAllGood.Dock = "Fill"
+# $lbAllGood.Font = New-Object System.Drawing.Font("Segoe UI Emoji", 24 , [System.Drawing.FontStyle]::Bold)
+# $lbAllGood.ForeColor = "#aaaaaa"
 
 
 
 # FUNCTIONS
+
+# EVENT CALLBACK FUNCTIONS
 
 function ListView_OnMouseDown {
     if ($_.Button -eq "Right") {
@@ -240,26 +216,45 @@ function ListView_OnMouseDown {
     }
 }
 
-function SelectAll_OnClick() {
-    if ($SelectAll.Checked) {
-        Foreach ($item in $ListView.Items) {
-            $item.checked = $true
-        }
+function Search_Click {
+    $source = ""
+    if ($sourceComboBox.SelectedItem) {
+        $source = $sourceComboBox.SelectedItem.ToString()
     }
-    elseif ($ListView.Items.Count -eq $ListView.CheckedItems.Count) {
-        foreach ($item in $ListView.Items) {
-            $item.Checked = $false
-        }
+    $searchBy = ""
+    if ($searchByComboBox.SelectedItem) {
+        $searchBy = $searchByComboBox.SelectedItem.ToString()
     }
+    $ProgressBar.Visible = $true
+    $jobby = Start-Job -ScriptBlock $SearchPackages -ArgumentList $searchBox.Text, $source, $searchBy
+    Do { [System.Windows.Forms.Application]::DoEvents() } Until ($jobby.State -eq "Completed")
+    $res = Get-Job | Receive-Job
+    $ProgressBar.Visible = $false
+    FillListView -type Explore -packages $res -columns @("Id", "Name", "Version", "Source")
 }
 
-function GetSelectedPackageIDs {
-    $SelectedPackages = @()
-    Foreach ($item in $ListView.CheckedItems) {
-        $SelectedPackages += $item.Text
-    }
-    $SelectedPackages
-}
+# function SelectAll_OnClick() {
+#     if ($SelectAll.Checked) {
+#         Foreach ($item in $ListView.Items) {
+#             $item.checked = $true
+#         }
+#     }
+#     elseif ($ListView.Items.Count -eq $ListView.CheckedItems.Count) {
+#         foreach ($item in $ListView.Items) {
+#             $item.Checked = $false
+#         }
+#     }
+# }
+
+# function GetSelectedPackageIDs {
+#     $SelectedPackages = @()
+#     Foreach ($item in $ListView.CheckedItems) {
+#         $SelectedPackages += $item.Text
+#     }
+#     $SelectedPackages
+# }
+
+# SCRIPT BLOCKS
 
 $GetInstalledPackages =
 {
@@ -287,63 +282,21 @@ $SearchPackages =
     $foundPackages
 }
 
-function MainForm_OnShown {
-    PopulateListView
-}
+# function MainForm_OnShown {
+#     PopulateListView
+# }
 
-function ListAllPackages_OnCheckedChanged {
-    PopulateListView
-}
+# function ListAllPackages_OnCheckedChanged {
+#     PopulateListView
+# }
 
-function isInstalled {
+function IsInstalled {
     param (
         $package
     )
     $_installedPackages = GetInstalledPackages
     $result = ($package.Id -in $_installedPackages.Id)
     $result
-}
-
-function NewListViewItem {
-    param (
-        [Parameter(Mandatory)]
-        [ValidateSet("Explore", "Installed", "Update")]
-        [string]$type,
-        [Parameter(Mandatory)]
-        $package
-    )
-    # Column 0 : Id
-    $Item = New-Object System.Windows.Forms.ListViewItem($package.Id)
-    # Column 1 : Name
-    $Item.SubItems.Add($package.Name) | Out-Null
-
-    if ("Explore" -eq $type) { 
-        # Column 2 : Version (Latest)
-        $Item.SubItems.Add($package.Version) | Out-Null
-        # Column 3 : Source
-        $Item.SubItems.Add($package.Source) | Out-Null
-        if ((IsInstalled $package)) {
-            $Item.ForeColor = [System.Drawing.SystemColors]::ActiveCaption
-        }
-
-    }
-    if (("Installed" -eq $type) -or ("Update" -eq $type)) {
-        # Column 2 : Version (Installed)
-        $Item.SubItems.Add($package.InstalledVersion) | Out-Null
-        #Column 3 : Last Available Version
-        if ($package.AvailableVersions.Count -gt 0) {
-            $Item.SubItems.Add($package.AvailableVersions[0]) | Out-Null
-        }
-        else {
-            $Item.SubItems.Add("") | Out-Null
-        }
-        # Column 4 : Source
-        if ($package.Source) {
-            $Item.SubItems.Add($package.Source) | Out-Null
-        }
-    }
-
-    $Item
 }
 
 function FillListView {
