@@ -205,6 +205,48 @@ function NewListView {
     $ListView
 }
 
+function NewListViewItem {
+    param (
+        [Parameter(Mandatory)]
+        [ValidateSet("Explore", "Installed", "Update")]
+        [string]$type,
+        [Parameter(Mandatory)]
+        $package
+    )
+    # Column 0 : Id
+    $Item = New-Object System.Windows.Forms.ListViewItem($package.Id)
+    # Column 1 : Name
+    $Item.SubItems.Add($package.Name) | Out-Null
+
+    if ("Explore" -eq $type) { 
+        # Column 2 : Version (Latest)
+        $Item.SubItems.Add($package.Version) | Out-Null
+        # Column 3 : Source
+        $Item.SubItems.Add($package.Source) | Out-Null
+        if ((IsInstalled $package)) {
+            $Item.ForeColor = [System.Drawing.SystemColors]::ActiveCaption
+        }
+
+    }
+    if (("Installed" -eq $type) -or ("Update" -eq $type)) {
+        # Column 2 : Version (Installed)
+        $Item.SubItems.Add($package.InstalledVersion) | Out-Null
+        #Column 3 : Last Available Version
+        if ($package.AvailableVersions.Count -gt 0) {
+            $Item.SubItems.Add($package.AvailableVersions[0]) | Out-Null
+        }
+        else {
+            $Item.SubItems.Add("") | Out-Null
+        }
+        # Column 4 : Source
+        if ($package.Source) {
+            $Item.SubItems.Add($package.Source) | Out-Null
+        }
+    }
+
+    $Item
+}
+
 function NewTextBox ($dock, $anchor, $width, $padding, $margin) {
     $textBox = New-Object System.Windows.Forms.TextBox
     if ($dock) {
