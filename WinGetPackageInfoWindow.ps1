@@ -31,6 +31,18 @@ function Show-WinGetPackageInfoWindow {
     $InfoWindow.BackColor = "#fbfbfb" # [System.Drawing.SystemColors]::ControlLightLight
     $InfoWindow.Add_Shown({ InfoWindow_OnShown })
 
+    # Spinner
+    $Spinner = New-Object System.Windows.Forms.PictureBox
+    $Spinner.ImageLocation = "$PSScriptRoot\spinner.gif"
+    $Spinner.AutoSize = $true
+    $Spinner.Anchor = "None"
+    $Spinner.Location = New-Object System.Drawing.Point(
+        [int](($InfoWindow.ClientSize.Width - $Spinner.Size.Width) / 2),
+        [int](($InfoWindow.ClientSize.Height - $Spinner.Size.Height) / 2)
+    );
+    # $Spinner.Dock = "Fill"
+    $InfoWindow.Controls.Add($Spinner)
+
     # Info Panel
     $InfoPanel = New-Object System.Windows.Forms.TableLayoutPanel
     $InfoPanel.Padding = New-Object System.Windows.Forms.Padding(60, 0, 60, 0)
@@ -130,21 +142,26 @@ function Show-WinGetPackageInfoWindow {
 
     function InfoWindow_OnShown {
     
-        # Clear info window 
+        # Clear info window
         $InfoPanel.Controls.Clear()
 
         if (Test-Path -Path $PackageInfosDir) {
             <# Action to perform if the condition is true #>
         }
-    
+        
+
+
         # Start `winget show` job
         $jobby = Start-Job -ScriptBlock $getPackageInfo -ArgumentList $Query, $Id, $Name, $Moniker
         Do { [System.Windows.Forms.Application]::DoEvents() } Until ($jobby.State -eq "Completed")
         $packageInfo = Get-Job | Receive-Job
+        $Spinner.Visible = $false
+        $InfoWindow.Controls.Remove($Spinner)
+        $Spinner.Dispose()
         
         # Display Multi-Dimention Dictionary
         DisplayMultiDimentionDict -Dictionary $packageInfo -Level 0
-    
+
         $InfoWindow.Text = "Info: " + $Query
     }
 
