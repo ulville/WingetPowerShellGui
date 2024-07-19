@@ -40,6 +40,7 @@ $MainForm = NewMainForm
 # HIGH LEVEL ELEMENTS
 
 $tabControl = NewTabControl
+$tabControl.Add_Selected({ OnTabSelected })
 
 $exploreTabPage = NewTabPage "Explore"
 $installedTabPage = NewTabPage "Installed"
@@ -49,9 +50,10 @@ $tabControl.Controls.Add($exploreTabPage)
 $tabControl.Controls.Add($installedTabPage)
 $tabControl.Controls.Add($updatesTabPage)
 
+$fillingPanel = NewPanel "Fill" -padding "12, 12, 12, 0"
+
 $bottomPanel = NewBottomPanel
 
-$fillingPanel = NewPanel "Fill" -padding "12, 12, 12, 0"
 
 # IN BOTTOM PANEL
 
@@ -61,6 +63,8 @@ $AcceptButton.DialogResult = [Windows.Forms.DialogResult]::OK
 
 $ProgressBar = NewProgressBar
 $bottomPanel.Controls.AddRange(@($ProgressBar, $AcceptButton))
+
+# TABPAGES
 
 # IN EXPLORE TABPAGE
 
@@ -103,6 +107,15 @@ $filterPanel.Controls.Add($searchByComboBox, 1, 1)
 $explorePanel.Controls.Add($filterPanel)
 $explorePanel.Controls.Add($searchPanel)
 $exploreTabPage.Controls.Add($explorePanel)
+
+# IN INSTALLED TABPAGE
+
+$installedPanel = NewSizeLimitedPanel 800
+$installedFilterPanel = NewFilterPanel
+$installedSearchPanel = NewSearchPanel
+
+# IN SEARCH PANEL - INSTALLED
+# IN FILTER PANEL - INSTALLED
 
 # FILLING (MID) PANEL
 
@@ -209,6 +222,26 @@ $MainForm.Controls.AddRange(@(
 
 # EVENT CALLBACK FUNCTIONS
 
+function OnTabSelected {
+    switch ($_.TabPageIndex) {
+        # Explore
+        0 {
+
+        }
+        # Installed
+        1 {
+            FillListView -type Installed `
+                -packages (GetInstalledPackages) `
+                -columns @("Id", "Name", "Version", "Available", "Source")
+        }
+        # Updates
+        2 {
+
+        }
+        Default {}
+    }    
+}
+
 function ListView_OnMouseDown {
     if ($_.Button -eq "Right") {
         $selectedItem = $ListView.SelectedItems
@@ -225,11 +258,7 @@ function Search_Click {
     if ($searchByComboBox.SelectedItem) {
         $searchBy = $searchByComboBox.SelectedItem.ToString()
     }
-    $ProgressBar.Visible = $true
-    $jobby = Start-Job -ScriptBlock $SearchPackages -ArgumentList $searchBox.Text, $source, $searchBy
-    Do { [System.Windows.Forms.Application]::DoEvents() } Until ($jobby.State -eq "Completed")
-    $res = Get-Job | Receive-Job
-    $ProgressBar.Visible = $false
+    $res = AsyncRun -ScriptBlock $SearchPackages -ArgumentList $searchBox.Text, $source, $searchBy
     FillListView -type Explore -packages $res -columns @("Id", "Name", "Version", "Source")
 }
 
@@ -417,7 +446,7 @@ function IsCacheFresh ([double]$freshnessLimitInSecs = 60) {
 }
 
 function GetInstalledPackages {
-    if ((IsCacheAvailable) -and (IsCacheFresh)) {
+    if ((IsCacheAvailable) -and (IsCacheFresh 180)) {
         $installedPackages = Import-Clixml -Path $InstalledPackagesLocalPath
     }
     else {
@@ -457,6 +486,7 @@ if ($formResult -eq [Windows.Forms.DialogResult]::OK) {
     }
     Write-Host "> sudo winget $subcommand $SelectedPacks"
     sudo winget $subcommand $SelectedPacks
+    Remove-Item -Path $InstalledPackagesLocalPath
     # if ($WaitAfterDone.Checked) {
     Read-Host "Process finished. Press Enter to Exit"
     # }
