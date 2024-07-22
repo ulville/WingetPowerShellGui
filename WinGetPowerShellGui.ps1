@@ -119,11 +119,18 @@ $installedSearchPanel = NewSearchPanel
 
 # FILLING (MID) PANEL
 
-# ListView
-$ListView = NewListView
-$ListView.Add_MouseDown({ ListView_OnMouseDown })
+# LISTVIEWS
+$exploreListView = NewListView
+$installedListView = NewListView
+$updatesListView = NewListView
 
-$fillingPanel.Controls.Add($ListView)
+$exploreListView.Add_MouseDown({ ListView_OnMouseDown })
+$installedListView.Add_MouseDown({ ListView_OnMouseDown })
+$updatesListView.Add_MouseDown({ ListView_OnMouseDown })
+
+$fillingPanel.Controls.Add($exploreListView)
+# $fillingPanel.Controls.Add($installedListView)
+# $fillingPanel.Controls.Add($updatesListView)
 
 # ADD SUB-CONTAINERS TO MAIN WINDOW
 
@@ -226,7 +233,8 @@ function OnTabSelected {
     switch ($_.TabPageIndex) {
         # Explore
         0 {
-
+            $fillingPanel.Controls.Clear()
+            $fillingPanel.Controls.Add($exploreListView)
         }
         # Installed
         1 {
@@ -244,7 +252,7 @@ function OnTabSelected {
 
 function ListView_OnMouseDown {
     if ($_.Button -eq "Right") {
-        $selectedItem = $ListView.SelectedItems
+        $selectedItem = $this.SelectedItems
         Show-WinGetPackageInfoWindow -Id -Query $selectedItem.Text
     }
 }
@@ -336,6 +344,12 @@ function FillListView {
         $packages,
         [array]$columns
     )
+    switch ($type) {
+        "Explore" { $ListView = $exploreListView }
+        "Installed" { $ListView = $installedListView }
+        "Update" { $ListView = $updatesListView }
+        Default {}
+    }
     $ListView.Items.Clear()
     $ListView.Columns.Clear()
 
@@ -351,6 +365,8 @@ function FillListView {
         $Column.AutoResize("ColumnContent")
         $Column.Width += 20
     }
+    $fillingPanel.Controls.Clear()
+    $fillingPanel.Controls.Add($ListView)
 }
 
 # function PopulateListView {
