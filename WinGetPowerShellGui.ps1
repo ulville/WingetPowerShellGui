@@ -35,7 +35,7 @@ $hWnd = [Foo.ConsoleUtils]::GetConsoleWindow()
 
 # Create a new form
 $MainForm = NewMainForm
-# $MainForm.Add_Shown({ MainForm_OnShown })
+$MainForm.Add_Shown({ MainForm_OnShown })
 
 # HIGH LEVEL ELEMENTS
 
@@ -235,16 +235,19 @@ function OnTabSelected {
         0 {
             $fillingPanel.Controls.Clear()
             $fillingPanel.Controls.Add($exploreListView)
+            $AcceptButton.Text = "Install"
         }
         # Installed
         1 {
-            FillListView -type Installed `
-                -packages (GetInstalledPackages) `
-                -columns @("Id", "Name", "Version", "Available", "Source")
+            $fillingPanel.Controls.Clear()
+            $fillingPanel.Controls.Add($installedListView)
+            $AcceptButton.Text = "Uninstall"
         }
         # Updates
         2 {
-
+            $fillingPanel.Controls.Clear()
+            $fillingPanel.Controls.Add($updatesListView)
+            $AcceptButton.Text = "Upgrade"
         }
         Default {}
     }    
@@ -319,9 +322,19 @@ $SearchPackages =
     $foundPackages
 }
 
-# function MainForm_OnShown {
-#     PopulateListView
-# }
+function MainForm_OnShown {
+    $installedPackages = GetInstalledPackages
+    $updateablePackages = $installedPackages | Where-Object IsUpdateAvailable -Eq "True"
+    $determinedUpdateablePackages = $updateablePackages | Where-Object InstalledVersion -NE "Unknown"
+    
+    FillListView -type Installed `
+        -packages $installedPackages `
+        -columns @("Id", "Name", "Version", "Available", "Source")
+    
+    FillListView -type Update `
+        -packages $determinedUpdateablePackages `
+        -columns @("Id", "Name", "Version", "Available", "Source")
+}
 
 # function ListAllPackages_OnCheckedChanged {
 #     PopulateListView
@@ -365,8 +378,7 @@ function FillListView {
         $Column.AutoResize("ColumnContent")
         $Column.Width += 20
     }
-    $fillingPanel.Controls.Clear()
-    $fillingPanel.Controls.Add($ListView)
+    $ListView
 }
 
 # function PopulateListView {
@@ -487,18 +499,27 @@ $formResult = $MainForm.ShowDialog()
 [Foo.ConsoleUtils]::ShowWindow($hWnd, $show) | Out-Null
 
 if ($formResult -eq [Windows.Forms.DialogResult]::OK) {
+    switch ($AcceptButton.Text) {
+        "Install" {
+            $subcommand = "install"
+            $ListView = $exploreListView 
+        }
+        "Uninstall" {
+            $subcommand = "uninstall"
+            $ListView = $installedListView 
+        }
+        "Upgrade" {
+            $subcommand = "upgrade" 
+            $ListView = $updatesListView
+        }
+        Default {}
+    }
     if ($ListView.CheckedItems.Count -eq 0) {
         Write-Host "Nothing has selected"
         return
     }
     else {
         $SelectedPacks = ($ListView.CheckedItems | ForEach-Object { $_.Text })
-    }
-    switch ($AcceptButton.Text) {
-        "Install" { $subcommand = "install" }
-        "Uninstall" { $subcommand = "uninstall" }
-        "Upgrade" { $subcommand = "upgrade" }
-        Default {}
     }
     Write-Host "> sudo winget $subcommand $SelectedPacks"
     sudo winget $subcommand $SelectedPacks
