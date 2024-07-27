@@ -62,7 +62,12 @@ $AcceptButton.DialogResult = [Windows.Forms.DialogResult]::OK
 # $MainForm.AcceptButton = $AcceptButton
 
 $ProgressBar = NewProgressBar
-$bottomPanel.Controls.AddRange(@($ProgressBar, $AcceptButton))
+
+$RefreshCacheButton = NewButton "Refresh Cache" -height 25 -dock "Left" -width 100
+$RefreshCacheButton.Add_Click({ RefreshCache })
+
+$bottomPanel.Controls.AddRange(@($RefreshCacheButton, $ProgressBar, $AcceptButton))
+
 
 # TABPAGES
 
@@ -271,6 +276,11 @@ function Search_Click {
     }
     $res = AsyncRun -ScriptBlock $SearchPackages -ArgumentList $searchBox.Text, $source, $searchBy
     FillListView -type Explore -packages $res -columns @("Id", "Name", "Version", "Source")
+}
+
+function RefreshCache {
+    Remove-Item -Path $InstalledPackagesLocalPath
+    MainForm_OnShown
 }
 
 # function SelectAll_OnClick() {

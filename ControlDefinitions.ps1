@@ -117,7 +117,10 @@ function NewBottomPanel {
     )
     $tlPanel = New-Object System.Windows.Forms.TableLayoutPanel
     $tlPanel.AutoSize = $true
-    $tlPanel.ColumnCount = 2
+    $tlPanel.ColumnCount = 3
+    $tlPanel.ColumnStyles.Add((
+            New-Object System.Windows.Forms.ColumnStyle
+        )) | Out-Null
     $tlPanel.ColumnStyles.Add((
             New-Object System.Windows.Forms.ColumnStyle("Percent", 100.0)
         )) | Out-Null
@@ -135,10 +138,12 @@ function NewBottomPanel {
     $tlPanel
 }
 
-function NewButton ($text, $width, $height, $anchor, $dock, $margin) {
+function NewButton ($text, $width, $height, $anchor, $dock, $margin, [switch]$autosize) {
     $button = New-Object System.Windows.Forms.Button
     $button.Text = $text
-    # $button.AutoSize = $true
+    if ($autosize) {
+        $button.AutoSize = $true
+    }
     if ($width) {
         $button.Width = $width
     }
