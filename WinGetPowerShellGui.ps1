@@ -120,7 +120,40 @@ $installedFilterPanel = NewFilterPanel
 $installedSearchPanel = NewSearchPanel
 
 # IN SEARCH PANEL - INSTALLED
+
+$installedSearchBox = NewTextBox -dock "Fill" -margin "3, 4, 6, 3"
+$installedSearchBox.Add_KeyDown({ installedSearchBox_KeyDown })
+function installedSearchBox_KeyDown {    
+    if ($_.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
+        $installedSearchBox.Multiline = $true
+        InstalledSearch_Click
+        $installedSearchBox.Multiline = $false
+        # $_.Handled = $true
+        # $_.SuppressKeyPress = $true
+    }
+}
+$installedSearchButton = NewButton "Search" -margin "3, 3, 6, 3" -height 25
+$installedSearchButton.Add_Click({ InstalledSearch_Click })
+
+$installedSearchPanel.Controls.AddRange(@($installedSearchBox, $installedSearchButton))
+
 # IN FILTER PANEL - INSTALLED
+
+$installedSourceLabel = NewLabel "Source:" -autosize
+$installedSearchByLabel = NewLabel "Search By:" -autosize
+$installedSourceComboBox = NewComboBox @("All", "winget", "msstore", "Other")
+$installedSearchByComboBox = NewComboBox @("Anything", "Id", "Name", "Moniker")
+
+$installedFilterPanel.Controls.Add($installedSourceLabel, 0, 0)
+$installedFilterPanel.Controls.Add($installedSearchByLabel, 1, 0)
+$installedFilterPanel.Controls.Add($installedSourceComboBox, 0, 1)
+$installedFilterPanel.Controls.Add($installedSearchByComboBox, 1, 1)
+
+# ADD ELEMENTS TO EXPLORE PANEL/TABPAGE
+
+$installedPanel.Controls.Add($installedFilterPanel)
+$installedPanel.Controls.Add($installedSearchPanel)
+$installedTabPage.Controls.Add($installedPanel)
 
 # FILLING (MID) PANEL
 
@@ -276,6 +309,47 @@ function Search_Click {
     }
     $res = AsyncRun -ScriptBlock $SearchPackages -ArgumentList $searchBox.Text, $source, $searchBy
     FillListView -type Explore -packages $res -columns @("Id", "Name", "Version", "Source")
+}
+
+function InstalledSearch_Click {
+    $source = ""
+    if ($installedSourceComboBox.SelectedItem) {
+        $source = $installedSourceComboBox.SelectedItem.ToString()
+    }
+    $searchBy = ""
+    if ($installedSearchByComboBox.SelectedItem) {
+        $searchBy = $installedSearchByComboBox.SelectedItem.ToString()
+    }
+
+    $installedPackages = GetInstalledPackages
+
+    switch ($source) {
+        "" { $filteredPackages = $installedPackages }
+        "All" { $filteredPackages = $installedPackages }
+        "Other" { $filteredPackages = $installedPackages | Where-Object Source -NE "winget" | Where-Object Source -NE "msstore" }
+        Default { $filteredPackages = $installedPackages | Where-Object Source -EQ $source }
+    }
+
+    if ($installedSearchBox.Text -ne "") {
+        switch ($searchBy) {
+            "Id" { $searchResult = $filteredPackages | Where-Object Id -Like "*$($installedSearchBox.Text)*" }
+            "Name" { $searchResult = $filteredPackages | Where-Object Name -Like "*$($installedSearchBox.Text)*" }
+            Default {
+                $searchResult = $filteredPackages |
+                Where-Object { ($_.Id -Like "*$($installedSearchBox.Text)*") -or
+                ($_.Name -Like "*$($installedSearchBox.Text)*") }
+            }
+        }
+    }
+    else {
+        $searchResult = $filteredPackages
+    }
+    
+    FillListView -type Installed `
+        -packages $searchResult `
+        -columns @("Id", "Name", "Version", "Available", "Source")
+    # $res = AsyncRun -ScriptBlock $SearchPackages -ArgumentList $searchBox.Text, $source, $searchBy
+    # FillListView -type Explore -packages $res -columns @("Id", "Name", "Version", "Source")
 }
 
 function RefreshCache {
@@ -529,7 +603,7 @@ if ($formResult -eq [Windows.Forms.DialogResult]::OK) {
         return
     }
     else {
-        $SelectedPacks = ($ListView.CheckedItems | ForEach-Object { $_.Text })
+        $SelectedPacks = ($ListView.CheckedItems | ForEach-Object { "`"$($_.Text)`"" })
     }
     Write-Host "> sudo winget $subcommand $SelectedPacks"
     sudo winget $subcommand $SelectedPacks
