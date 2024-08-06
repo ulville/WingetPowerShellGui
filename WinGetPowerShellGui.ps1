@@ -142,6 +142,7 @@ $installedSearchPanel.Controls.AddRange(@($installedSearchBox, $installedSearchB
 $installedSourceLabel = NewLabel "Source:" -autosize
 $installedSearchByLabel = NewLabel "Search By:" -autosize
 $installedSourceComboBox = NewComboBox @("All", "winget", "msstore", "Other")
+$installedSourceComboBox.Add_SelectionChangeCommitted({ InstalledSearch_Click })
 $installedSearchByComboBox = NewComboBox @("Anything", "Id", "Name", "Moniker")
 
 $installedFilterPanel.Controls.Add($installedSourceLabel, 0, 0)
