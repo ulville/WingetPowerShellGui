@@ -63,7 +63,7 @@ $AcceptButton.DialogResult = [Windows.Forms.DialogResult]::OK
 
 $ProgressBar = NewProgressBar
 
-$RefreshCacheButton = NewButton "Refresh Cache" -height 25 -dock "Left" -width 100
+$RefreshCacheButton = NewButton "`u{e72c}" -height 25 -dock "Left" -font (New-Object System.Drawing.Font("Segoe Fluent Icons", 12))
 $RefreshCacheButton.Add_Click({ RefreshCache })
 
 $bottomPanel.Controls.AddRange(@($RefreshCacheButton, $ProgressBar, $AcceptButton))
@@ -419,6 +419,8 @@ function MainForm_OnShown {
     FillListView -type Update `
         -packages $determinedUpdateablePackages `
         -columns @("Id", "Name", "Version", "Available", "Source")
+
+    # $MainForm.Close() # trace
 }
 
 # function ListAllPackages_OnCheckedChanged {
@@ -539,11 +541,17 @@ function AsyncRun {
         [scriptblock]$ScriptBlock,
         $ArgumentList
     )
+    $MainForm.WindowState = "Minimized"
     $ProgressBar.Visible = $true
-    $jobby = Start-Job -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
-    Do { [System.Windows.Forms.Application]::DoEvents() } Until ($jobby.State -eq "Completed")
-    $result = Get-Job | Receive-Job
+    # TODO: Disable Every Control Here
+    $result = Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
+    # $jobby = Start-Job -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
+    # Do { [System.Windows.Forms.Application]::DoEvents() } Until ($jobby.State -eq "Completed")
+    # # Get-Job | Wait-Job
+    # $result = Get-Job | Receive-Job
+    # TODO: Restore Enablement State of Controls Here
     $ProgressBar.Visible = $false
+    $MainForm.WindowState = "Normal"
     $result
 }
 
@@ -559,12 +567,13 @@ function IsCacheFresh ([double]$freshnessLimitInSecs = 60) {
 }
 
 function GetInstalledPackages {
-    if ((IsCacheAvailable) -and (IsCacheFresh 180)) {
+    if ((IsCacheAvailable) -and (IsCacheFresh 300)) {
         $installedPackages = Import-Clixml -Path $InstalledPackagesLocalPath
     }
     else {
         $installedPackages = AsyncRun -ScriptBlock $GetInstalledPackages
         $installedPackages | Export-Clixml -Path $InstalledPackagesLocalPath
+        $installedPackages = Import-Clixml -Path $InstalledPackagesLocalPath
     }
     $installedPackages
 }
@@ -609,6 +618,8 @@ if ($formResult -eq [Windows.Forms.DialogResult]::OK) {
     Write-Host "> sudo winget $subcommand $SelectedPacks"
     sudo winget $subcommand $SelectedPacks
     Remove-Item -Path $InstalledPackagesLocalPath
+    $packageList = Get-WinGetPackage
+    $packageList | Export-Clixml -Path $InstalledPackagesLocalPath
     # if ($WaitAfterDone.Checked) {
     Read-Host "Process finished. Press Enter to Exit"
     # }

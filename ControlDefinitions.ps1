@@ -138,7 +138,7 @@ function NewBottomPanel {
     $tlPanel
 }
 
-function NewButton ($text, $width, $height, $anchor, $dock, $margin, [switch]$autosize) {
+function NewButton ($text, $width, $height, $anchor, $dock, $margin, [switch]$autosize, $font) {
     $button = New-Object System.Windows.Forms.Button
     $button.Text = $text
     if ($autosize) {
@@ -158,6 +158,9 @@ function NewButton ($text, $width, $height, $anchor, $dock, $margin, [switch]$au
     }    
     if ($margin) {
         $button.Margin = $margin
+    }
+    if ($font) {
+        $button.Font = $font
     }
     $button.UseVisualStyleBackColor = $true
     $button
