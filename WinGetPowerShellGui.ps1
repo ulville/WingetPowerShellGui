@@ -308,49 +308,50 @@ function Search_Click {
     if ($searchByComboBox.SelectedItem) {
         $searchBy = $searchByComboBox.SelectedItem.ToString()
     }
-    $res = AsyncRun -ScriptBlock $SearchPackages -ArgumentList $searchBox.Text, $source, $searchBy
-    FillListView -type Explore -packages $res -columns @("Id", "Name", "Version", "Source")
+    # $res = AsyncRun -ScriptBlock $SearchPackages -ArgumentList $searchBox.Text, $source, $searchBy
+    startTimer -LongWork $SearchPackages -LongWorkArgs $searchBox.Text, $source, $searchBy -PostAction "Search_Click"
 }
 
 function InstalledSearch_Click {
-    $source = ""
-    if ($installedSourceComboBox.SelectedItem) {
-        $source = $installedSourceComboBox.SelectedItem.ToString()
-    }
-    $searchBy = ""
-    if ($installedSearchByComboBox.SelectedItem) {
-        $searchBy = $installedSearchByComboBox.SelectedItem.ToString()
-    }
-
-    $installedPackages = GetInstalledPackages
-
-    switch ($source) {
-        "" { $filteredPackages = $installedPackages }
-        "All" { $filteredPackages = $installedPackages }
-        "Other" { $filteredPackages = $installedPackages | Where-Object Source -NE "winget" | Where-Object Source -NE "msstore" }
-        Default { $filteredPackages = $installedPackages | Where-Object Source -EQ $source }
-    }
-
-    if ($installedSearchBox.Text -ne "") {
-        switch ($searchBy) {
-            "Id" { $searchResult = $filteredPackages | Where-Object Id -Like "*$($installedSearchBox.Text)*" }
-            "Name" { $searchResult = $filteredPackages | Where-Object Name -Like "*$($installedSearchBox.Text)*" }
-            Default {
-                $searchResult = $filteredPackages |
-                Where-Object { ($_.Id -Like "*$($installedSearchBox.Text)*") -or
-                ($_.Name -Like "*$($installedSearchBox.Text)*") }
+    $installedPackages = GetInstalledPackages -PostAction "InstalledSearch_Click"
+    if ($installedPackages) {
+        $source = ""
+        if ($installedSourceComboBox.SelectedItem) {
+            $source = $installedSourceComboBox.SelectedItem.ToString()
+        }
+        $searchBy = ""
+        if ($installedSearchByComboBox.SelectedItem) {
+            $searchBy = $installedSearchByComboBox.SelectedItem.ToString()
+        }
+    
+        switch ($source) {
+            "" { $filteredPackages = $installedPackages }
+            "All" { $filteredPackages = $installedPackages }
+            "Other" { $filteredPackages = $installedPackages | Where-Object Source -NE "winget" | Where-Object Source -NE "msstore" }
+            Default { $filteredPackages = $installedPackages | Where-Object Source -EQ $source }
+        }
+    
+        if ($installedSearchBox.Text -ne "") {
+            switch ($searchBy) {
+                "Id" { $searchResult = $filteredPackages | Where-Object Id -Like "*$($installedSearchBox.Text)*" }
+                "Name" { $searchResult = $filteredPackages | Where-Object Name -Like "*$($installedSearchBox.Text)*" }
+                Default {
+                    $searchResult = $filteredPackages |
+                    Where-Object { ($_.Id -Like "*$($installedSearchBox.Text)*") -or
+                    ($_.Name -Like "*$($installedSearchBox.Text)*") }
+                }
             }
         }
+        else {
+            $searchResult = $filteredPackages
+        }
+        
+        FillListView -type Installed `
+            -packages $searchResult `
+            -columns @("Id", "Name", "Version", "Available", "Source")
+        # $res = AsyncRun -ScriptBlock $SearchPackages -ArgumentList $searchBox.Text, $source, $searchBy
+        # FillListView -type Explore -packages $res -columns @("Id", "Name", "Version", "Source")
     }
-    else {
-        $searchResult = $filteredPackages
-    }
-    
-    FillListView -type Installed `
-        -packages $searchResult `
-        -columns @("Id", "Name", "Version", "Available", "Source")
-    # $res = AsyncRun -ScriptBlock $SearchPackages -ArgumentList $searchBox.Text, $source, $searchBy
-    # FillListView -type Explore -packages $res -columns @("Id", "Name", "Version", "Source")
 }
 
 function RefreshCache {
@@ -408,17 +409,19 @@ $SearchPackages =
 }
 
 function MainForm_OnShown {
-    $installedPackages = GetInstalledPackages
-    $updateablePackages = $installedPackages | Where-Object IsUpdateAvailable -Eq "True"
-    $determinedUpdateablePackages = $updateablePackages | Where-Object InstalledVersion -NE "Unknown"
-    
-    FillListView -type Installed `
-        -packages $installedPackages `
-        -columns @("Id", "Name", "Version", "Available", "Source")
-    
-    FillListView -type Update `
-        -packages $determinedUpdateablePackages `
-        -columns @("Id", "Name", "Version", "Available", "Source")
+    $installedPackages = GetInstalledPackages -PostAction "MainForm_OnShown"
+    if ($installedPackages) {
+        $updatablePackages = $installedPackages | Where-Object IsUpdateAvailable -Eq "True"
+        $determinedUpdatablePackages = $updatablePackages | Where-Object InstalledVersion -NE "Unknown"
+        
+        FillListView -type Installed `
+            -packages $installedPackages `
+            -columns @("Id", "Name", "Version", "Available", "Source")
+        
+        FillListView -type Update `
+            -packages $determinedUpdatablePackages `
+            -columns @("Id", "Name", "Version", "Available", "Source")
+    }
 
     # $MainForm.Close() # trace
 }
@@ -431,7 +434,7 @@ function IsInstalled {
     param (
         $package
     )
-    $_installedPackages = GetInstalledPackages
+    $_installedPackages = Import-Clixml -Path $InstalledPackagesLocalPath
     $result = ($package.Id -in $_installedPackages.Id)
     $result
 }
@@ -507,54 +510,6 @@ function FillListView {
 #     }
 # }
 
-
-function GetWingetUpdates {
-
-    $UpdateButton.Enabled = $false
-    # $UpgradeButton.Enabled = $false
-    
-
-    $GroupBox.Controls.Clear()
-    
-    $UpdateStatus.Visible = $true
-    # $Gif.Visible = $true
-    $ProgressBar.Enabled = $true
-    $ProgressBar.Visible = $true
-    $GroupBox.Controls.Add($ProgressBar)
-    $jobby = Start-Job -ScriptBlock $GetInstalledPackages
-    Do { [System.Windows.Forms.Application]::DoEvents() } Until ($jobby.State -eq "Completed")
-    $installedPackages = Get-Job | Receive-Job
-    $installedPackages | Export-Clixml -Path $InstalledPackagesLocalPath
-    $UpdateStatus.Visible = $false
-    # $Gif.Visible = $false
-    $ProgressBar.Enabled = $false
-    $ProgressBar.Visible = $false
-    $UpdateButton.Enabled = $true
-    # $UpgradeButton.Enabled = $true
-    # $UpgradeButton.Visible = $true
-    
-    PopulateListView
-}
-
-function AsyncRun {
-    param (
-        [scriptblock]$ScriptBlock,
-        $ArgumentList
-    )
-    $MainForm.WindowState = "Minimized"
-    $ProgressBar.Visible = $true
-    # TODO: Disable Every Control Here
-    $result = Invoke-Command -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
-    # $jobby = Start-Job -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
-    # Do { [System.Windows.Forms.Application]::DoEvents() } Until ($jobby.State -eq "Completed")
-    # # Get-Job | Wait-Job
-    # $result = Get-Job | Receive-Job
-    # TODO: Restore Enablement State of Controls Here
-    $ProgressBar.Visible = $false
-    $MainForm.WindowState = "Normal"
-    $result
-}
-
 function IsCacheAvailable {
     Test-Path -Path $InstalledPackagesLocalPath -PathType Leaf
 }
@@ -566,16 +521,100 @@ function IsCacheFresh ([double]$freshnessLimitInSecs = 60) {
     $res
 }
 
-function GetInstalledPackages {
+function GetInstalledPackages($PostAction) {
     if ((IsCacheAvailable) -and (IsCacheFresh 300)) {
         $installedPackages = Import-Clixml -Path $InstalledPackagesLocalPath
+        $installedPackages
     }
     else {
-        $installedPackages = AsyncRun -ScriptBlock $GetInstalledPackages
-        $installedPackages | Export-Clixml -Path $InstalledPackagesLocalPath
-        $installedPackages = Import-Clixml -Path $InstalledPackagesLocalPath
+        startTimer -LongWork $GetInstalledPackages -PostAction $PostAction | Out-Null
+        # startTimer -LongWork $GetInstalledPackages -PostAction $PostAction | Out-Null
+        return $false
+        # $installedPackages = AsyncRun -ScriptBlock $GetInstalledPackages
+        # $installedPackages | Export-Clixml -Path $InstalledPackagesLocalPath
+        # $installedPackages = Import-Clixml -Path $InstalledPackagesLocalPath
     }
-    $installedPackages
+}
+
+$timer = New-Object System.Windows.Forms.Timer
+$timer.Interval = 1000
+$timer.Add_Tick({ On_Tick })
+
+function On_Tick() {
+    $MyJob = Get-Job -Name "WinGetPwShGUI_Background_Job"
+    # Runs on every tick
+
+    if ($MyJob.State -eq "Completed") {
+        # Runs after job has completed
+        $JobResult = $MyJob | Receive-Job
+        $LongWorkResult = $JobResult.LongWorkResult
+        $PostAction = $JobResult.PostAction
+
+        switch ($PostAction) {
+            "MainForm_OnShown" {
+                $installedPackages = $LongWorkResult
+                $installedPackages | Export-Clixml -Path $InstalledPackagesLocalPath
+                $installedPackages = Import-Clixml -Path $InstalledPackagesLocalPath
+                MainForm_OnShown
+            }
+            "InstalledSearch_Click" {
+                InstalledSearch_Click
+            }
+            "Search_Click" {
+                FillListView -type Explore -packages $LongWorkResult -columns @("Id", "Name", "Version", "Source")
+            }
+            Default {}
+        }
+        
+        stopTimer
+    }
+}
+
+function startTimer() {
+    param(
+        $LongWork,
+        $LongWorkArgs,
+        $PostAction
+    )
+    $RunnerArgs = @{
+        LongWork     = $LongWork
+        LongWorkArgs = $LongWorkArgs
+        PostAction   = $PostAction
+    }
+    Start-Job -ScriptBlock $LongWorkRunner -ArgumentList $RunnerArgs -Name "WinGetPwShGUI_Background_Job"
+    $ProgressBar.Visible = $true
+    $timer.Start()
+
+}
+
+$LongWorkRunner = {
+    param(
+        $RunnerArgs
+    )
+    $LongWork = $RunnerArgs.LongWork
+    $LongWorkArgs = $RunnerArgs.LongWorkArgs
+    $PostAction = $RunnerArgs.PostAction
+    Write-Host $LongWork
+    $sbLongWork = [scriptblock]::Create($LongWork)
+
+    $LongWorkResult = Invoke-Command -ScriptBlock $sbLongWork -ArgumentList $LongWorkArgs
+
+    $ResultWithPostAction = @{
+        LongWorkResult = $LongWorkResult
+        PostAction     = $PostAction
+    }
+
+    $ResultWithPostAction
+}
+
+function stopTimer() {
+    $ProgressBar.Visible = $false
+
+    $timer.Enabled = $false
+    Get-Job -Name "WinGetPwShGUI_Background_Job" | Stop-Job
+    Get-Job -Name "WinGetPwShGUI_Background_Job" | Remove-Job
+    Write-Host "Close Function"
+
 }
 
 
