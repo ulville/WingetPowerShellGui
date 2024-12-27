@@ -581,6 +581,9 @@ function On_Tick() {
                 MainForm_OnShown
             }
             "InstalledSearch_Click" {
+                $installedPackages = $LongWorkResult
+                $installedPackages | Export-Clixml -Path $InstalledPackagesLocalPath
+                $installedPackages = Import-Clixml -Path $InstalledPackagesLocalPath
                 InstalledSearch_Click
             }
             "Search_Click" {
