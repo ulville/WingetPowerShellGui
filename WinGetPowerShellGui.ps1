@@ -559,7 +559,7 @@ function GetInstalledPackages($PostAction) {
 }
 
 $timer = New-Object System.Windows.Forms.Timer
-$timer.Interval = 1000
+$timer.Interval = 250
 $timer.Add_Tick({ On_Tick })
 
 function On_Tick() {
@@ -633,12 +633,10 @@ $LongWorkRunner = {
 }
 
 function stopTimer() {
-    $ProgressBar.Visible = $false
-
     $timer.Enabled = $false
     Get-Job -Name "WinGetPwShGUI_Background_Job" | Stop-Job
     Get-Job -Name "WinGetPwShGUI_Background_Job" | Remove-Job
-
+    $ProgressBar.Visible = $false
 }
 
 
