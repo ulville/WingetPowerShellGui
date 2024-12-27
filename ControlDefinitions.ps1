@@ -219,7 +219,8 @@ function NewListViewItem {
         [ValidateSet("Explore", "Installed", "Update")]
         [string]$type,
         [Parameter(Mandatory)]
-        $package
+        $package,
+        $installedPackages
     )
     # Column 0 : Id
     $Item = New-Object System.Windows.Forms.ListViewItem($package.Id)
@@ -231,7 +232,7 @@ function NewListViewItem {
         $Item.SubItems.Add($package.Version) | Out-Null
         # Column 3 : Source
         $Item.SubItems.Add($package.Source) | Out-Null
-        if ((IsInstalled $package)) {
+        if ((IsInstalled $package $installedPackages )) {
             $Item.ForeColor = [System.Drawing.SystemColors]::ActiveCaption
         }
 

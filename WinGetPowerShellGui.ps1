@@ -432,10 +432,10 @@ function MainForm_OnShown {
 
 function IsInstalled {
     param (
-        $package
+        $package,
+        $installedPackages
     )
-    $_installedPackages = Import-Clixml -Path $InstalledPackagesLocalPath
-    $result = ($package.Id -in $_installedPackages.Id)
+    $result = ($package.Id -in $installedPackages.Id)
     $result
 }
 
@@ -445,7 +445,8 @@ function FillListView {
         [ValidateSet("Explore", "Installed", "Update")]
         [string]$type,
         $packages,
-        [array]$columns
+        [array]$columns,
+        $installedPackages
     )
     switch ($type) {
         "Explore" { $ListView = $exploreListView }
@@ -461,13 +462,31 @@ function FillListView {
     }
 
     foreach ($package in $packages) {
-        $PackageItem = NewListViewItem -type $type -package $package
+        $PackageItem = NewListViewItem -type $type -package $package -installedPackages $installedPackages
         $ListView.Items.Add($PackageItem)
     }
     foreach ($Column in $ListView.Columns) {
         $Column.AutoResize("ColumnContent")
         $Column.Width += 20
     }
+    $naturalWidths = @(
+        @{"ListView" = $exploreListView; "NaturalWidth" = 0 },
+        @{"ListView" = $installedListView; "NaturalWidth" = 0 },
+        @{"ListView" = $updatesListView; "NaturalWidth" = 0 }
+    )
+    foreach ($nw in $naturalWidths) {
+        foreach ($column in $nw.ListView.Columns) {
+            $nw["NaturalWidth"] += $column.Width
+        }
+    }
+    $biggestNaturalWidth = [System.Math]::Max(
+        ([System.Math]::Max($naturalWidths[0].NaturalWidth, $naturalWidths[1].NaturalWidth)),
+        $naturalWidths[2].NaturalWidth
+    )
+    $oldWidth = $MainForm.Width
+    $MainForm.Width = $biggestNaturalWidth + 61
+    $MainForm.Left = $MainForm.Location.X - (($MainForm.Width - $oldWidth) / 2)
+
     $ListView
 }
 
@@ -549,6 +568,7 @@ function On_Tick() {
         $JobResult = $MyJob | Receive-Job
         $LongWorkResult = $JobResult.LongWorkResult
         $PostAction = $JobResult.PostAction
+        stopTimer
 
         switch ($PostAction) {
             "MainForm_OnShown" {
@@ -561,12 +581,12 @@ function On_Tick() {
                 InstalledSearch_Click
             }
             "Search_Click" {
-                FillListView -type Explore -packages $LongWorkResult -columns @("Id", "Name", "Version", "Source")
+                $installedPackages = Import-Clixml -Path $InstalledPackagesLocalPath
+                FillListView -type Explore -packages $LongWorkResult -columns @("Id", "Name", "Version", "Source") -installedPackages $installedPackages
             }
             Default {}
         }
         
-        stopTimer
     }
 }
 
