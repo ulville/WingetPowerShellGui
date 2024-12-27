@@ -294,8 +294,11 @@ function OnTabSelected {
 
 function ListView_OnMouseDown {
     if ($_.Button -eq "Right") {
-        $selectedItem = $this.SelectedItems
-        Show-WinGetPackageInfoWindow -Id -Query $selectedItem.Text
+        $selectedItem = $this.SelectedItems[0]
+        [System.Windows.Forms.ListViewItem+ListViewSubItemCollection]$subitems = $selectedItem.SubItems
+        $indexOfAvailableVersion = $subitems.IndexOfKey("Available")
+        $availableVersion = $subitems[$indexOfAvailableVersion].Text
+        Show-WinGetPackageInfoWindow -Id -Query $selectedItem.Text -Version $availableVersion
     }
 }
 
@@ -614,7 +617,6 @@ $LongWorkRunner = {
     $LongWork = $RunnerArgs.LongWork
     $LongWorkArgs = $RunnerArgs.LongWorkArgs
     $PostAction = $RunnerArgs.PostAction
-    Write-Host $LongWork
     $sbLongWork = [scriptblock]::Create($LongWork)
 
     $LongWorkResult = Invoke-Command -ScriptBlock $sbLongWork -ArgumentList $LongWorkArgs
@@ -633,7 +635,6 @@ function stopTimer() {
     $timer.Enabled = $false
     Get-Job -Name "WinGetPwShGUI_Background_Job" | Stop-Job
     Get-Job -Name "WinGetPwShGUI_Background_Job" | Remove-Job
-    Write-Host "Close Function"
 
 }
 

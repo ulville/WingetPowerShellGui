@@ -145,16 +145,21 @@ function Show-WinGetPackageInfoWindow {
         # Clear info window
         $InfoPanel.Controls.Clear()
 
-        if (Test-Path -Path $PackageInfosDir) {
-            <# Action to perform if the condition is true #>
+        $cacheFileName = "$($Query)_v_$($Version).xml"
+        $cacheFilePath = "$PackageInfosDir\$cacheFileName"
+        if (Test-Path -Path $cacheFilePath -PathType Leaf) {
+            $packageInfo = Import-Clixml -Path $cacheFilePath
+        }
+        else {
+            # Start `winget show` job
+            $jobby = Start-Job -ScriptBlock $getPackageInfo -ArgumentList $Query, $Id, $Name, $Moniker
+            Do { [System.Windows.Forms.Application]::DoEvents() } Until ($jobby.State -eq "Completed")
+            $packageInfo = Get-Job | Receive-Job
+            $cacheFileName = "$($Query)_v_$($packageInfo.Version).xml"
+            $cacheFilePath = "$PackageInfosDir\$cacheFileName"
+            $packageInfo | Export-Clixml -Path $cacheFilePath
         }
         
-
-
-        # Start `winget show` job
-        $jobby = Start-Job -ScriptBlock $getPackageInfo -ArgumentList $Query, $Id, $Name, $Moniker
-        Do { [System.Windows.Forms.Application]::DoEvents() } Until ($jobby.State -eq "Completed")
-        $packageInfo = Get-Job | Receive-Job
         $Spinner.Visible = $false
         $InfoWindow.Controls.Remove($Spinner)
         $Spinner.Dispose()

@@ -224,14 +224,18 @@ function NewListViewItem {
     )
     # Column 0 : Id
     $Item = New-Object System.Windows.Forms.ListViewItem($package.Id)
+    $Item.SubItems[0].Name = "Id"
     # Column 1 : Name
     $Item.SubItems.Add($package.Name) | Out-Null
-
+    $Item.SubItems[1].Name = "Name"
     if ("Explore" -eq $type) { 
         # Column 2 : Version (Latest)
         $Item.SubItems.Add($package.Version) | Out-Null
+        $Item.SubItems[2].Name = "Available"
         # Column 3 : Source
         $Item.SubItems.Add($package.Source) | Out-Null
+        $Item.SubItems[3].Name = "Source"
+
         if ((IsInstalled $package $installedPackages )) {
             $Item.ForeColor = [System.Drawing.SystemColors]::ActiveCaption
         }
@@ -240,6 +244,7 @@ function NewListViewItem {
     if (("Installed" -eq $type) -or ("Update" -eq $type)) {
         # Column 2 : Version (Installed)
         $Item.SubItems.Add($package.InstalledVersion) | Out-Null
+        $Item.SubItems[2].Name = "Version"
         #Column 3 : Last Available Version
         if ($package.AvailableVersions.Count -gt 0) {
             $Item.SubItems.Add($package.AvailableVersions[0]) | Out-Null
@@ -247,9 +252,11 @@ function NewListViewItem {
         else {
             $Item.SubItems.Add("") | Out-Null
         }
+        $Item.SubItems[3].Name = "Available"
         # Column 4 : Source
         if ($package.Source) {
             $Item.SubItems.Add($package.Source) | Out-Null
+            $Item.SubItems[4].Name = "Source"
         }
     }
 
