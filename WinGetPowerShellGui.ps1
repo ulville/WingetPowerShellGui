@@ -8,7 +8,7 @@ $src = @'
     public static extern bool ShowWindow(IntPtr hWnd, Int32 nCmdShow);
 '@
 
-Add-Type -Name ConsoleUtils -Namespace Foo -MemberDefinition $src
+Add-Type -Name ConsoleUtils -Namespace WGPSGUI -MemberDefinition $src
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
@@ -28,8 +28,8 @@ $InstalledPackagesLocalPath = "$WinGetPSGUIDataDir\InstalledPackages.xml"
 $hide = 0
 $show = 1
 
-$hWnd = [Foo.ConsoleUtils]::GetConsoleWindow()
-[Foo.ConsoleUtils]::ShowWindow($hWnd, $hide) | Out-Null
+$hWnd = [WGPSGUI.ConsoleUtils]::GetConsoleWindow()
+[WGPSGUI.ConsoleUtils]::ShowWindow($hWnd, $hide) | Out-Null
 
 [Windows.Forms.Application]::EnableVisualStyles()
 
@@ -651,7 +651,7 @@ $formResult = $MainForm.ShowDialog()
 
 # These Will Run After The Form Is Closed
 
-[Foo.ConsoleUtils]::ShowWindow($hWnd, $show) | Out-Null
+[WGPSGUI.ConsoleUtils]::ShowWindow($hWnd, $show) | Out-Null
 
 if ($formResult -eq [Windows.Forms.DialogResult]::OK) {
     switch ($AcceptButton.Text) {
