@@ -41,6 +41,22 @@ if ($Force) {
 
 Get-ChildItem $scriptsSourceDir | Copy-Item -Recurse -Destination $scriptsDir
 
+# Add Script Directory to PATH
+
+$snippet = '
+
+# Add WinGetPowerShellGui Script Folder To PATH
+
+$sep = ($env:Path[$env:Path.Length - 1] -ne ";") ? ";" : ""
+$env:Path += "${sep}' + $scriptsDir + '"
+
+'
+if ($env:Path -notlike "*$scriptsDir*" ) {
+    Add-Content -Path $PROFILE -Value $snippet
+    $sep = ($env:Path[$env:Path.Length - 1] -ne ";") ? ";" : ""
+    $env:Path += "${sep}${scriptsDir}"
+}
+
 # Install Tools
 
 $toolsSourceDir = "$PSScriptRoot\Tools"
@@ -75,18 +91,18 @@ Get-ChildItem $assetsSourceDir | Copy-Item -Recurse -Destination $assetsDir
 # Add Scheduled Task
 
 if ($Force) {
-    Get-ScheduledTask -TaskName "Update-WingetPSUICache" -TaskPath "\Ulville\" | Unregister-ScheduledTask -Confirm:$false
+    Get-ScheduledTask -TaskName "Update-WinGetPSGuiCache" -TaskPath "\Ulville\" | Unregister-ScheduledTask -Confirm:$false
 }
 
 $action = New-ScheduledTaskAction -Execute "${toolsDir}hidden-bat.vbs" -Argument "`"${scriptsDir}Tasks\UpdateLocalCache.ps1`"" -WorkingDirectory "${scriptsDir}Tasks"
 $repInterval = New-TimeSpan -Minutes 5
 $trigger = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME" # -RepetitionInterval $repInterval -RepetitionDuration $repDuration
 $trigger.Repetition = (New-ScheduledTaskTrigger -once -at "12am" -RepetitionInterval $repInterval).Repetition
-$principal = New-ScheduledTaskPrincipal -UserId ulvican -Id Author -RunLevel Limited -LogonType Interactive -ProcessTokenSidType Default
+$principal = New-ScheduledTaskPrincipal -UserId "$env:USERNAME" -Id Author -RunLevel Limited -LogonType Interactive -ProcessTokenSidType Default
 $settings = New-ScheduledTaskSettingsSet -Compatibility Vista
 $description = "Store Get-WinGetPackages output object in a file. Update regularly."
 $task = New-ScheduledTask -Action $action -Principal $principal -Trigger $trigger -Settings $settings -Description $description
-Register-ScheduledTask -TaskPath "\Ulville\" -TaskName "Update-WingetPSUICache" -InputObject $task
+Register-ScheduledTask -TaskPath "\Ulville\" -TaskName "Update-WinGetPSGuiCache" -InputObject $task
 
 # Add Desktop Shortcut
 
@@ -97,6 +113,8 @@ $sc.Arguments = "-WindowStyle hidden -NoProfile -Command `"${scriptsDir}WinGetPo
 $sc.Description = "WinGet PowerShell GUI"
 $sc.WorkingDirectory = "$env:USERPROFILE"
 $sc.Save()
+
+# Add Start Menu Shortcut
 
 $sc = $ws.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\WGPSGUI.lnk")
 $sc.TargetPath = "$((Get-Command pwsh).Source)"
