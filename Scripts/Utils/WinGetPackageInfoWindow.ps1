@@ -33,7 +33,7 @@ function Show-WinGetPackageInfoWindow {
 
     # Spinner
     $Spinner = New-Object System.Windows.Forms.PictureBox
-    $Spinner.ImageLocation = "$PSScriptRoot\spinner.gif"
+    $Spinner.ImageLocation = "$PSScriptRoot\..\..\Assets\spinner.gif"
     $Spinner.AutoSize = $true
     $Spinner.Anchor = "None"
     $Spinner.Location = New-Object System.Drawing.Point(

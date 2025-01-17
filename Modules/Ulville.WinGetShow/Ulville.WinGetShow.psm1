@@ -20,7 +20,7 @@
 
  .Example
    # Get winget show info for 7zip as a hashtable
-   Get-WinGetPackageInformation --id 7zip.7zip
+   Get-WinGetPackageInformation -Id 7zip.7zip
 #>
 
 function ValidateLineYaml($testSubject) {

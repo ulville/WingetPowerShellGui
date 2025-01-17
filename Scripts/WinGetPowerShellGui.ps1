@@ -12,8 +12,8 @@ Add-Type -Name ConsoleUtils -Namespace WGPSGUI -MemberDefinition $src
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-. "$PSScriptRoot\WinGetPackageInfoWindow.ps1"
-. "$PSScriptRoot\ControlDefinitions.ps1"
+. "$PSScriptRoot\Utils\WinGetPackageInfoWindow.ps1"
+. "$PSScriptRoot\Utils\ControlDefinitions.ps1"
 
 $WinGetPSGUIDataDir = "$env:APPDATA\WinGetPowerShellGui\"
 if (-not (Test-Path -Path $WinGetPSGUIDataDir -PathType Container)) {

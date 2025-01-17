@@ -1,0 +1,1 @@
+pwsh.exe -nop -File "%1"
