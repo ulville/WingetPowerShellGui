@@ -1,3 +1,5 @@
+#Requires -Modules Microsoft.WinGet.Client, Ulville.WinGetShow
+
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 # Init PowerShell Gui
