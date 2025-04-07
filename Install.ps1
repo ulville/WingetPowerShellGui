@@ -109,7 +109,7 @@ Register-ScheduledTask -TaskPath "\Ulville\" -TaskName "Update-WinGetPSGuiCache"
 $ws = New-Object -ComObject WScript.Shell
 $sc = $ws.CreateShortcut("$env:USERPROFILE\Desktop\WGPSGUI.lnk")
 $sc.TargetPath = "$((Get-Command pwsh).Source)"
-$sc.Arguments = "-WindowStyle hidden -NoProfile -Command `"${scriptsDir}WinGetPowerShellGui.ps1`""
+$sc.Arguments = "-NoProfile -Command `"${scriptsDir}WinGetPowerShellGui.ps1`""
 $sc.Description = "WinGet PowerShell GUI"
 $sc.WorkingDirectory = "$env:USERPROFILE"
 $sc.Save()
@@ -118,7 +118,7 @@ $sc.Save()
 
 $sc = $ws.CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\WGPSGUI.lnk")
 $sc.TargetPath = "$((Get-Command pwsh).Source)"
-$sc.Arguments = "-WindowStyle hidden -NoProfile -Command `"${scriptsDir}WinGetPowerShellGui.ps1`""
+$sc.Arguments = "-NoProfile -Command `"${scriptsDir}WinGetPowerShellGui.ps1`""
 $sc.Description = "WinGet PowerShell GUI"
 $sc.WorkingDirectory = "$env:USERPROFILE"
 $sc.Save()

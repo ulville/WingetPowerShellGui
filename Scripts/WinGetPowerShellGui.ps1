@@ -1,5 +1,9 @@
 #Requires -Modules Microsoft.WinGet.Client, Ulville.WinGetShow
 
+# Print Banner
+Write-Output "WinGet PowerShell Gui. Loading..."
+
+# Set encoding
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 # Init PowerShell Gui
@@ -31,7 +35,6 @@ $hide = 0
 $show = 1
 
 $hWnd = [WGPSGUI.ConsoleUtils]::GetConsoleWindow()
-[WGPSGUI.ConsoleUtils]::ShowWindow($hWnd, $hide) | Out-Null
 
 [Windows.Forms.Application]::EnableVisualStyles()
 
@@ -647,6 +650,10 @@ function stopTimer() {
 #         $tabControl, $bottomPanel, $fillingPanel, <# $Title,  $Description, #>$UpdateButton, $UpdateStatus, <# $Gif,#> $SelectAll, 
 #         $ShowUndetermined, $ListAllPackages, $WaitAfterDone, <# $UpgradeButton, #> $GroupBox
 #     ))
+
+# Hide Terminal Window
+
+[WGPSGUI.ConsoleUtils]::ShowWindow($hWnd, $hide) | Out-Null
 
 # Display The Form
 $formResult = $MainForm.ShowDialog()
