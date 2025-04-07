@@ -287,3 +287,14 @@ function NewComboBox ($items) {
     $comboBox.Items.AddRange($items)
     $comboBox
 }
+
+function NewCheckbox {
+    param (
+        $threeState = $false,
+        $text
+    )
+    $checkBox = New-Object System.Windows.Forms.CheckBox
+    $checkBox.ThreeState = $threeState
+    $checkBox.Text = $text
+    $checkBox
+}

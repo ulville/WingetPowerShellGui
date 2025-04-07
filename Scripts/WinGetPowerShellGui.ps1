@@ -155,11 +155,17 @@ $installedFilterPanel.Controls.Add($installedSearchByLabel, 1, 0)
 $installedFilterPanel.Controls.Add($installedSourceComboBox, 0, 1)
 $installedFilterPanel.Controls.Add($installedSearchByComboBox, 1, 1)
 
-# ADD ELEMENTS TO EXPLORE PANEL/TABPAGE
+# ADD ELEMENTS TO INSTALLED PANEL/TABPAGE
 
 $installedPanel.Controls.Add($installedFilterPanel)
 $installedPanel.Controls.Add($installedSearchPanel)
 $installedTabPage.Controls.Add($installedPanel)
+
+# ADD ELEMENTS TO UPDATE PANEL/TABPAGE
+
+$selectAll = NewCheckbox -text "Select All"
+$selectAll.Add_Click({ SelectAll_OnClick })
+$updatesTabPage.Controls.Add($selectAll)
 
 # FILLING (MID) PANEL
 
@@ -171,6 +177,8 @@ $updatesListView = NewListView
 $exploreListView.Add_MouseDown({ ListView_OnMouseDown })
 $installedListView.Add_MouseDown({ ListView_OnMouseDown })
 $updatesListView.Add_MouseDown({ ListView_OnMouseDown })
+
+$updatesListView.Add_ItemChecked({ ListView_OnItemChecked })
 
 $fillingPanel.Controls.Add($exploreListView)
 # $fillingPanel.Controls.Add($installedListView)
@@ -307,6 +315,28 @@ function ListView_OnMouseDown {
     }
 }
 
+function ListView_OnItemChecked {
+
+    $isAllSelected = $true
+    $isNoneSelected = $true
+    foreach ($item in $this.Items) {
+        if ($item.Checked) {
+            $isNoneSelected = $false
+        }
+        $isAllSelected = $isAllSelected -and $item.Checked
+    }
+    if ($isAllSelected) {
+        $selectAll.CheckState = "Checked"
+    }
+    elseif ($isNoneSelected) {
+        $selectAll.CheckState = "Unchecked"
+    }
+    else {
+        $selectAll.CheckState = "Indeterminate"
+    }
+    
+}
+
 function Search_Click {
     $source = ""
     if ($sourceComboBox.SelectedItem) {
@@ -367,18 +397,18 @@ function RefreshCache {
     MainForm_OnShown
 }
 
-# function SelectAll_OnClick() {
-#     if ($SelectAll.Checked) {
-#         Foreach ($item in $ListView.Items) {
-#             $item.checked = $true
-#         }
-#     }
-#     elseif ($ListView.Items.Count -eq $ListView.CheckedItems.Count) {
-#         foreach ($item in $ListView.Items) {
-#             $item.Checked = $false
-#         }
-#     }
-# }
+function SelectAll_OnClick() {
+    if ($SelectAll.Checked) {
+        Foreach ($item in $updatesListView.Items) {
+            $item.checked = $true
+        }
+    }
+    elseif ($updatesListView.Items.Count -eq $updatesListView.CheckedItems.Count) {
+        foreach ($item in $updatesListView.Items) {
+            $item.Checked = $false
+        }
+    }
+}
 
 # function GetSelectedPackageIDs {
 #     $SelectedPackages = @()
