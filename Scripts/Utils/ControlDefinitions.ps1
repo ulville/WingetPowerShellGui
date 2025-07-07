@@ -7,6 +7,7 @@ function NewMainForm() {
     $MainForm.Text = "WinGet Powershell GUI"
     $MainForm.StartPosition = "CenterScreen"
     $MainForm.MinimumSize = New-Object System.Drawing.Size(320, 400)
+    $MainForm.Icon = New-Object System.Drawing.Icon("$PSScriptRoot\..\..\Assets\icon_v2.ico")
     # $MainForm.Padding = 12
     $MainForm
 }

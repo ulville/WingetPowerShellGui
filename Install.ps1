@@ -112,6 +112,7 @@ $sc.TargetPath = "$((Get-Command pwsh).Source)"
 $sc.Arguments = "-NoProfile -Command `"${scriptsDir}WinGetPowerShellGui.ps1`""
 $sc.Description = "WinGet PowerShell GUI"
 $sc.WorkingDirectory = "$env:USERPROFILE"
+$sc.IconLocation = "${assetsDir}icon_v2.ico"
 $sc.Save()
 
 # Add Start Menu Shortcut
@@ -121,4 +122,5 @@ $sc.TargetPath = "$((Get-Command pwsh).Source)"
 $sc.Arguments = "-NoProfile -Command `"${scriptsDir}WinGetPowerShellGui.ps1`""
 $sc.Description = "WinGet PowerShell GUI"
 $sc.WorkingDirectory = "$env:USERPROFILE"
+$sc.IconLocation = "${assetsDir}icon_v2.ico"
 $sc.Save()
