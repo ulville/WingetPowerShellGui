@@ -1,9 +1,12 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-function NewMainForm() {
+function NewMainForm($size) {
     $MainForm = New-Object System.Windows.Forms.Form
-    $MainForm.ClientSize = '566,550'
+    if (!$size) {
+        $size = '566,550'
+    }
+    $MainForm.ClientSize = $size
     $MainForm.Text = "WinGet Powershell GUI"
     $MainForm.StartPosition = "CenterScreen"
     $MainForm.MinimumSize = New-Object System.Drawing.Size(320, 400)
@@ -292,10 +295,14 @@ function NewComboBox ($items) {
 function NewCheckbox {
     param (
         $threeState = $false,
-        $text
+        $text,
+        $margin
     )
     $checkBox = New-Object System.Windows.Forms.CheckBox
     $checkBox.ThreeState = $threeState
     $checkBox.Text = $text
+    if ($margin) {
+        $checkBox.Margin = $margin
+    }
     $checkBox
 }

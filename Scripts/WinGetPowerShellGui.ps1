@@ -30,6 +30,13 @@ if (-not (Test-Path -Path $WinGetPSGUIDataDir -PathType Container)) {
 
 # $AllPackagesLocalPath = "$WinGetPSGUIDataDir\AllPackages.xml"
 $InstalledPackagesLocalPath = "$WinGetPSGUIDataDir\InstalledPackages.xml"
+$configFile = "$WinGetPSGUIDataDir\Config.json"
+$Config = $Config = Get-Content -Path $configFile |  ConvertFrom-Json
+if (!$Config) {
+    $Config = [PSCustomObject]@{
+        Size = $null
+    }
+}
 
 $hide = 0
 $show = 1
@@ -39,8 +46,9 @@ $hWnd = [WGPSGUI.ConsoleUtils]::GetConsoleWindow()
 [Windows.Forms.Application]::EnableVisualStyles()
 
 # Create a new form
-$MainForm = NewMainForm
+$MainForm = NewMainForm -size $Config.Size
 $MainForm.Add_Shown({ MainForm_OnShown })
+$MainForm.Add_FormClosed({ Save_Config })
 
 # HIGH LEVEL ELEMENTS
 
@@ -163,9 +171,14 @@ $installedTabPage.Controls.Add($installedPanel)
 
 # ADD ELEMENTS TO UPDATE PANEL/TABPAGE
 
-$selectAll = NewCheckbox -text "Select All"
+$selectAllPanel = NewSearchPanel
+$updatesPanel = NewSizeLimitedPanel 800
+
+$selectAll = NewCheckbox -text "Select All" -padding "2, 0, 6, 3"
 $selectAll.Add_Click({ SelectAll_OnClick })
-$updatesTabPage.Controls.Add($selectAll)
+$selectAllPanel.Controls.Add($selectAll)
+$updatesPanel.Controls.Add($selectAllPanel)
+$updatesTabPage.Controls.Add($updatesPanel)
 
 # FILLING (MID) PANEL
 
@@ -376,7 +389,7 @@ function InstalledSearch_Click {
                 Default {
                     $searchResult = $filteredPackages |
                     Where-Object { ($_.Id -Like "*$($installedSearchBox.Text)*") -or
-                    ($_.Name -Like "*$($installedSearchBox.Text)*") }
+                        ($_.Name -Like "*$($installedSearchBox.Text)*") }
                 }
             }
         }
@@ -444,6 +457,11 @@ $SearchPackages =
     }
     $foundPackages = Find-WinGetPackage @HashArguments 
     $foundPackages
+}
+
+function Save_Config {
+    $Config.Size = $this.ClientSize.Width.ToString() + ", " + $this.ClientSize.Height.ToString()
+    $Config | ConvertTo-Json | Out-File -FilePath $configFile
 }
 
 function MainForm_OnShown {
@@ -517,13 +535,13 @@ function FillListView {
             $nw["NaturalWidth"] += $column.Width
         }
     }
-    $biggestNaturalWidth = [System.Math]::Max(
-        ([System.Math]::Max($naturalWidths[0].NaturalWidth, $naturalWidths[1].NaturalWidth)),
-        $naturalWidths[2].NaturalWidth
-    )
-    $oldWidth = $MainForm.Width
-    $MainForm.Width = $biggestNaturalWidth + 61
-    $MainForm.Left = $MainForm.Location.X - (($MainForm.Width - $oldWidth) / 2)
+    # $biggestNaturalWidth = [System.Math]::Max(
+    #     ([System.Math]::Max($naturalWidths[0].NaturalWidth, $naturalWidths[1].NaturalWidth)),
+    #     $naturalWidths[2].NaturalWidth
+    # )
+    # $oldWidth = $MainForm.Width
+    # $MainForm.Width = $biggestNaturalWidth + 61
+    # $MainForm.Left = $MainForm.Location.X - (($MainForm.Width - $oldWidth) / 2)
 
     $ListView
 }
