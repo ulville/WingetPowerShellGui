@@ -15,6 +15,14 @@ $src = @'
 '@
 
 Add-Type -Name ConsoleUtils -Namespace WGPSGUI -MemberDefinition $src
+
+$dpiSrc = @'
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    public static extern bool SetProcessDPIAware();
+'@
+
+Add-Type -Name DPIAwareness -Namespace WGPSGUI -MemberDefinition $dpiSrc
+
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
@@ -44,6 +52,7 @@ $show = 1
 $hWnd = [WGPSGUI.ConsoleUtils]::GetConsoleWindow()
 
 [Windows.Forms.Application]::EnableVisualStyles()
+[WGPSGUI.DPIAwareness]::SetProcessDPIAware()
 
 # Create a new form
 $MainForm = NewMainForm -size $Config.Size
