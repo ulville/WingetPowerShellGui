@@ -155,7 +155,8 @@ function Show-WinGetPackageInfoWindow {
             $jobby = Start-Job -ScriptBlock $getPackageInfo -ArgumentList $Query, $Id, $Name, $Moniker
             Do { [System.Windows.Forms.Application]::DoEvents() } Until ($jobby.State -eq "Completed")
             $packageInfo = Get-Job | Receive-Job
-            $cacheFileName = "$($Query)_v_$($packageInfo.Version).xml"
+            $fileNameBase = $Query.Replace("\", "-")
+            $cacheFileName = "$($fileNameBase)_v_$($packageInfo.Version).xml"
             $cacheFilePath = "$PackageInfosDir\$cacheFileName"
             $packageInfo | Export-Clixml -Path $cacheFilePath
         }
