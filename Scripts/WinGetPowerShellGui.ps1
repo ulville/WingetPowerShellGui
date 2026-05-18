@@ -28,6 +28,7 @@ Add-Type -AssemblyName System.Drawing
 
 . "$PSScriptRoot\Utils\WinGetPackageInfoWindow.ps1"
 . "$PSScriptRoot\Utils\ControlDefinitions.ps1"
+. "$PSScriptRoot\Utils\IconGetters.ps1"
 
 $WinGetPSGUIDataDir = "$env:APPDATA\WinGetPowerShellGui\"
 if (-not (Test-Path -Path $WinGetPSGUIDataDir -PathType Container)) {
@@ -42,7 +43,8 @@ $configFile = "$WinGetPSGUIDataDir\Config.json"
 $Config = $Config = Get-Content -Path $configFile |  ConvertFrom-Json
 if (!$Config) {
     $Config = [PSCustomObject]@{
-        Size = $null
+        Size     = $null
+        IconSize = 24
     }
 }
 
@@ -58,6 +60,8 @@ $hWnd = [WGPSGUI.ConsoleUtils]::GetConsoleWindow()
 $MainForm = NewMainForm -size $Config.Size
 $MainForm.Add_Shown({ MainForm_OnShown })
 $MainForm.Add_FormClosed({ Save_Config })
+
+Write-Host "Creating Tabs" -ForegroundColor DarkYellow
 
 # HIGH LEVEL ELEMENTS
 
@@ -76,6 +80,7 @@ $fillingPanel = NewPanel "Fill" -padding "12, 12, 12, 0"
 
 $bottomPanel = NewBottomPanel
 
+Write-Host "Creating Bottom Panel Elements" -ForegroundColor DarkYellow
 
 # IN BOTTOM PANEL
 
@@ -94,6 +99,8 @@ $bottomPanel.Controls.AddRange(@($RefreshCacheButton, $ProgressBar, $AcceptButto
 # TABPAGES
 
 # IN EXPLORE TABPAGE
+
+Write-Host "Creating Explore Tab Elements" -ForegroundColor DarkYellow
 
 $explorePanel = NewSizeLimitedPanel 800
 $filterPanel = NewFilterPanel
@@ -136,6 +143,8 @@ $explorePanel.Controls.Add($searchPanel)
 $exploreTabPage.Controls.Add($explorePanel)
 
 # IN INSTALLED TABPAGE
+
+Write-Host "Creating Installed/Update Tab Elements" -ForegroundColor DarkYellow
 
 $installedPanel = NewSizeLimitedPanel 800
 $installedFilterPanel = NewFilterPanel
@@ -192,9 +201,50 @@ $updatesTabPage.Controls.Add($updatesPanel)
 # FILLING (MID) PANEL
 
 # LISTVIEWS
+
+Write-Host "Getting winget list details" -ForegroundColor DarkYellow
+
+$details = Get-WingetPackegeDetails
+
+Write-Host "Creating Listviews" -ForegroundColor DarkYellow
+
 $exploreListView = NewListView
 $installedListView = NewListView
 $updatesListView = NewListView
+
+Write-Host "Filling Icon Lookup Table" -ForegroundColor DarkYellow
+
+$iconLookup = GetPackageIcons $details $Config.IconSize
+
+Write-Host "Creating Image List object" -ForegroundColor DarkYellow
+
+$imageList = New-Object System.Windows.Forms.ImageList
+$imageList.ImageSize = New-Object System.Drawing.Size($Config.IconSize, $Config.IconSize)
+$imageList.ColorDepth = "Depth32Bit"
+
+# Default Icon
+$defaultIcon = [System.Drawing.Icon]::ExtractIcon("$env:SystemRoot\system32\shell32.dll", 2, $Config.IconSize)
+$imageList.Images.Add($defaultIcon)
+
+Write-Host "Filling Image List with icons in Icon Lookup Table" -ForegroundColor DarkYellow
+
+$icon_count = 1
+$reverse_icon_map = @{}
+foreach ($iconLookupItem in $iconLookup.GetEnumerator()) {
+    $extracted_icon = Get-SafeIcon $iconLookupItem.Value $Config.IconSize
+    if (! $extracted_icon) {
+        continue
+    }
+    $reverse_icon_map.Add($iconLookupItem.Key, $icon_count)
+    $icon_count = $icon_count + 1
+
+    $imageList.Images.Add($extracted_icon)
+}
+
+Write-Host "Set ListView SmallImageLists as Image List" -ForegroundColor DarkYellow
+
+$installedListView.SmallImageList = $imageList
+$updatesListView.SmallImageList = $imageList
 
 $exploreListView.Add_MouseDown({ ListView_OnMouseDown })
 $installedListView.Add_MouseDown({ ListView_OnMouseDown })
@@ -324,7 +374,7 @@ function OnTabSelected {
             $AcceptButton.Text = "Upgrade"
         }
         Default {}
-    }    
+    }
 }
 
 function ListView_OnMouseDown {
@@ -356,7 +406,6 @@ function ListView_OnItemChecked {
     else {
         $selectAll.CheckState = "Indeterminate"
     }
-    
 }
 
 function Search_Click {
@@ -383,14 +432,14 @@ function InstalledSearch_Click {
         if ($installedSearchByComboBox.SelectedItem) {
             $searchBy = $installedSearchByComboBox.SelectedItem.ToString()
         }
-    
+
         switch ($source) {
             "" { $filteredPackages = $installedPackages }
             "All" { $filteredPackages = $installedPackages }
             "Other" { $filteredPackages = $installedPackages | Where-Object Source -NE "winget" | Where-Object Source -NE "msstore" }
             Default { $filteredPackages = $installedPackages | Where-Object Source -EQ $source }
         }
-    
+
         if ($installedSearchBox.Text -ne "") {
             switch ($searchBy) {
                 "Id" { $searchResult = $filteredPackages | Where-Object Id -Like "*$($installedSearchBox.Text)*" }
@@ -405,7 +454,7 @@ function InstalledSearch_Click {
         else {
             $searchResult = $filteredPackages
         }
-        
+
         FillListView -type Installed `
             -packages $searchResult `
             -columns @("Id", "Name", "Version", "Available", "Source")
@@ -478,11 +527,11 @@ function MainForm_OnShown {
     if ($installedPackages) {
         $updatablePackages = $installedPackages | Where-Object IsUpdateAvailable -Eq "True"
         $determinedUpdatablePackages = $updatablePackages | Where-Object InstalledVersion -NE "Unknown"
-        
+
         FillListView -type Installed `
             -packages $installedPackages `
             -columns @("Id", "Name", "Version", "Available", "Source")
-        
+
         FillListView -type Update `
             -packages $determinedUpdatablePackages `
             -columns @("Id", "Name", "Version", "Available", "Source")
@@ -527,7 +576,14 @@ function FillListView {
     }
 
     foreach ($package in $packages) {
-        $PackageItem = NewListViewItem -type $type -package $package -installedPackages $installedPackages
+        $params = @{
+            type              = $type
+            package           = $package
+            InstalledPackages = $installedPackages
+            PackageDetails    = $details
+            icon              = ([bool]($type -ne "Explore"))
+        }
+        $PackageItem = NewListViewItem @params
         $ListView.Items.Add($PackageItem)
     }
     foreach ($Column in $ListView.Columns) {
@@ -709,6 +765,8 @@ function stopTimer() {
 #     ))
 
 # Hide Terminal Window
+
+Write-Host "Hiding Terminal Window" -ForegroundColor DarkYellow
 
 [WGPSGUI.ConsoleUtils]::ShowWindow($hWnd, $hide) | Out-Null
 

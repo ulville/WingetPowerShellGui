@@ -207,6 +207,8 @@ function NewListView {
     $ListView = New-Object System.Windows.Forms.ListView
     $ListView.Dock = "Fill"
     $ListView.Font = New-Object System.Drawing.Font('Segoe UI', 10)
+    $ListView.BackColor = "#2d2d2d"
+    $ListView.ForeColor = "#f0f0f0"
     $ListView.CheckBoxes = $true
     $ListView.View = "Details"
     $ListView.FullRowSelect = $true
@@ -224,15 +226,30 @@ function NewListViewItem {
         [string]$type,
         [Parameter(Mandatory)]
         $package,
-        $installedPackages
+        $installedPackages,
+        $packageDetails,
+        [switch]$icon
     )
     # Column 0 : Id
     $Item = New-Object System.Windows.Forms.ListViewItem($package.Id)
     $Item.SubItems[0].Name = "Id"
+
+    if ($icon) {
+        $iconIndex = $reverse_icon_map[$package.Id]
+        if (! $iconIndex) {
+            $packageDetail = $packageDetails | Where-Object Name -EQ $package.Name | Select-Object -First 1
+            if ($packageDetail) {
+                $alternativeId = ($packageDetail).Id
+                $iconIndex = $reverse_icon_map[$alternativeId]
+            }
+        }
+        $Item.ImageIndex = $iconIndex
+    }
+
     # Column 1 : Name
     $Item.SubItems.Add($package.Name) | Out-Null
     $Item.SubItems[1].Name = "Name"
-    if ("Explore" -eq $type) { 
+    if ("Explore" -eq $type) {
         # Column 2 : Version (Latest)
         $Item.SubItems.Add($package.Version) | Out-Null
         $Item.SubItems[2].Name = "Available"
