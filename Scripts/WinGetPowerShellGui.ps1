@@ -55,10 +55,11 @@ $hWnd = [WGPSGUI.ConsoleUtils]::GetConsoleWindow()
 
 [Windows.Forms.Application]::EnableVisualStyles()
 [WGPSGUI.DPIAwareness]::SetProcessDPIAware()
+[System.Windows.Forms.Application]::SetColorMode([System.Windows.Forms.SystemColorMode]::System)
 
 # Create a new form
 $MainForm = NewMainForm -size $Config.Size
-$MainForm.Add_Shown({ MainForm_OnShown })
+$MainForm.Add_Shown({ MainForm_OnShownReal })
 $MainForm.Add_FormClosed({ Save_Config })
 
 Write-Host "Creating Tabs" -ForegroundColor DarkYellow
@@ -72,9 +73,7 @@ $exploreTabPage = NewTabPage "Explore"
 $installedTabPage = NewTabPage "Installed"
 $updatesTabPage = NewTabPage "Updates"
 
-$tabControl.Controls.Add($exploreTabPage)
-$tabControl.Controls.Add($installedTabPage)
-$tabControl.Controls.Add($updatesTabPage)
+
 
 $fillingPanel = NewPanel "Fill" -padding "12, 12, 12, 0"
 
@@ -110,7 +109,7 @@ $searchPanel = NewSearchPanel
 
 $searchBox = NewTextBox -dock "Fill" -margin "3, 4, 6, 3"
 $searchBox.Add_KeyDown({ searchBox_KeyDown })
-function searchBox_KeyDown {    
+function searchBox_KeyDown {
     if ($_.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
         $searchBox.Multiline = $true
         Search_Click
@@ -154,7 +153,7 @@ $installedSearchPanel = NewSearchPanel
 
 $installedSearchBox = NewTextBox -dock "Fill" -margin "3, 4, 6, 3"
 $installedSearchBox.Add_KeyDown({ installedSearchBox_KeyDown })
-function installedSearchBox_KeyDown {    
+function installedSearchBox_KeyDown {
     if ($_.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
         $installedSearchBox.Multiline = $true
         InstalledSearch_Click
@@ -197,6 +196,14 @@ $selectAll.Add_Click({ SelectAll_OnClick })
 $selectAllPanel.Controls.Add($selectAll)
 $updatesPanel.Controls.Add($selectAllPanel)
 $updatesTabPage.Controls.Add($updatesPanel)
+
+# ADD TABPAGES TO TAB CONTROL
+$dummyTabPage = NewTabPage "Dummy"
+
+$tabControl.Controls.AddRange(@($dummyTabPage, $exploreTabPage, $installedTabPage, $updatesTabPage))
+# $tabControl.Controls.Add($exploreTabPage)
+# $tabControl.Controls.Add($installedTabPage)
+# $tabControl.Controls.Add($updatesTabPage)
 
 # FILLING (MID) PANEL
 
@@ -258,95 +265,7 @@ $fillingPanel.Controls.Add($exploreListView)
 
 # ADD SUB-CONTAINERS TO MAIN WINDOW
 
-$MainForm.Controls.AddRange(@(
-        $fillingPanel, $tabControl, $bottomPanel))
-
-##############################################################################
-
-
-# Button to Update Package List
-# $UpdateButton = New-Object System.Windows.Forms.Button
-# $UpdateButton.Text = "Update"
-# $UpdateButton.width = 90
-# $UpdateButton.height = 30
-# $UpdateButton.Location = New-Object System.Drawing.Point(20, 85)
-# $UpdateButton.Font = 'Segoe UI,10'
-# $UpdateButton.Add_Click({ GetWingetUpdates })
-# $UpdateButton.Remove_Click({ GetWingetUpdates })
-
-#### DEBUG BUTTON
-# $DebugBreak = New-Object System.Windows.Forms.Button
-# $DebugBreak.Text = "Debug Break"
-# $DebugBreak.Location = New-Object System.Drawing.Point(($MainForm.Width - 220), ($MainForm.Height - 90))
-# $DebugBreak.Add_Click({DebugBreakFunc})
-# $DebugBreak.Anchor = 'Bottom, Right'
-# function DebugBreakFunc {
-#     Write-Host "" # PUT BreakPoint Here!
-# }
-# $MainForm.controls.Add($DebugBreak)
-#### DEBUG BUTTON END
-
-
-
-# Status Text
-# $UpdateStatus = NewLabel -text "Searching for updates..." -location -x 20 -y 140 -autosize
-# $UpdateStatus.Font = 'Segoe UI,10'
-
-
-# General Settings Checkboxes
-# $ListAllPackages = New-Object System.Windows.Forms.CheckBox
-# $ListAllPackages.AutoSize = $true
-# $ListAllPackages.Text = "List All Packages"
-# $ListAllPackages.Location = New-Object System.Drawing.Point(400, 55)
-# $ListAllPackages.Visible = $true
-# $ListAllPackages.Add_CheckedChanged({ PopulateListView })
-
-# $ShowUndetermined = New-Object System.Windows.Forms.CheckBox
-# $ShowUndetermined.AutoSize = $true
-# $ShowUndetermined.Text = "Show Undetermined"
-# $ShowUndetermined.Location = New-Object System.Drawing.Point(400, 75)
-# $ShowUndetermined.Visible = $true
-# $ShowUndetermined.Add_CheckedChanged({ PopulateListView })
-
-# $WaitAfterDone = New-Object System.Windows.Forms.CheckBox
-# $WaitAfterDone.AutoSize = $true
-# $WaitAfterDone.Text = "Wait After Done"
-# $WaitAfterDone.Location = New-Object System.Drawing.Point(400, 95)
-# $WaitAfterDone.Visible = $true
-
-# $SelectAll = New-Object System.Windows.Forms.CheckBox
-# $SelectAll.AutoSize = $true
-# $SelectAll.Text = "Select All"
-# $SelectAll.Location = New-Object System.Drawing.Point(400, 115)
-# $SelectAll.Visible = $false
-# $SelectAll.Add_Click({ SelectAll_OnClick })
-
-# GroupBox
-# $GroupBox = New-Object System.Windows.Forms.GroupBox
-# $GroupBox.Dock = "Top"
-# $GroupBox.Anchor = 'Bottom, Right, Left, Top'
-# $GroupBox.Left = 20
-# $GroupBox.Width = $MainForm.Width - 50
-# $GroupBox.Height = $MainForm.Height - $GroupBox.Top - 250
-# $GroupBox.Top = $UpdateStatus.Top
-# $GroupBox.Text = "Available Updates"
-# $GroupBox.Font = New-Object System.Drawing.Font(
-#     'Segoe UI', 10, 
-#     [System.Drawing.FontStyle]::Bold
-# )
-
-
-
-
-# Text Which Shows Up When No Upgrades Are Available
-# $lbAllGood = New-Object System.Windows.Forms.Label
-# $lbAllGood.Text = "✔️ Packages are up to date"
-# $lbAllGood.AutoSize = $false
-# $lbAllGood.TextAlign = "MiddleCenter"
-# $lbAllGood.Dock = "Fill"
-# $lbAllGood.Font = New-Object System.Drawing.Font("Segoe UI Emoji", 24 , [System.Drawing.FontStyle]::Bold)
-# $lbAllGood.ForeColor = "#aaaaaa"
-
+$MainForm.Controls.AddRange(@($fillingPanel, $tabControl, $bottomPanel))
 
 
 # FUNCTIONS
@@ -382,8 +301,10 @@ function ListView_OnMouseDown {
         $selectedItem = $this.SelectedItems[0]
         [System.Windows.Forms.ListViewItem+ListViewSubItemCollection]$subitems = $selectedItem.SubItems
         $indexOfAvailableVersion = $subitems.IndexOfKey("Available")
+        $indexOfId = $subitems.IndexOfKey("Id")
         $availableVersion = $subitems[$indexOfAvailableVersion].Text
-        Show-WinGetPackageInfoWindow -Id -Query $selectedItem.Text -Version $availableVersion
+        $IdOfSelectedItem = $subitems[$indexOfId].Text
+        Show-WinGetPackageInfoWindow -Id -Query $IdOfSelectedItem -Version $availableVersion
     }
 }
 
@@ -457,7 +378,7 @@ function InstalledSearch_Click {
 
         FillListView -type Installed `
             -packages $searchResult `
-            -columns @("Id", "Name", "Version", "Available", "Source")
+            -columns @("Name", "Id", "Version", "Available", "Source")
         # $res = AsyncRun -ScriptBlock $SearchPackages -ArgumentList $searchBox.Text, $source, $searchBy
         # FillListView -type Explore -packages $res -columns @("Id", "Name", "Version", "Source")
     }
@@ -497,7 +418,7 @@ $GetInstalledPackages =
     $packageList
 }
 
-$SearchPackages = 
+$SearchPackages =
 {
     param(
         $query,
@@ -511,15 +432,20 @@ $SearchPackages =
         Default { $HashArguments = @{Query = $query } }
     }
     if ($source -and ($source -ne "Both")) {
-        $HashArguments.Add("Source", $source) 
+        $HashArguments.Add("Source", $source)
     }
-    $foundPackages = Find-WinGetPackage @HashArguments 
+    $foundPackages = Find-WinGetPackage @HashArguments
     $foundPackages
 }
 
 function Save_Config {
     $Config.Size = $this.ClientSize.Width.ToString() + ", " + $this.ClientSize.Height.ToString()
     $Config | ConvertTo-Json | Out-File -FilePath $configFile
+}
+
+function MainForm_OnShownReal {
+    MainForm_OnShown
+    $tabControl.Controls.RemoveAt(0)
 }
 
 function MainForm_OnShown {
@@ -530,11 +456,11 @@ function MainForm_OnShown {
 
         FillListView -type Installed `
             -packages $installedPackages `
-            -columns @("Id", "Name", "Version", "Available", "Source")
+            -columns @("Name", "Id", "Version", "Available", "Source")
 
         FillListView -type Update `
             -packages $determinedUpdatablePackages `
-            -columns @("Id", "Name", "Version", "Available", "Source")
+            -columns @("Name", "Id", "Version", "Available", "Source")
     }
 
     # $MainForm.Close() # trace
@@ -706,11 +632,11 @@ function On_Tick() {
             }
             "Search_Click" {
                 $installedPackages = Import-Clixml -Path $InstalledPackagesLocalPath
-                FillListView -type Explore -packages $LongWorkResult -columns @("Id", "Name", "Version", "Source") -installedPackages $installedPackages
+                FillListView -type Explore -packages $LongWorkResult -columns @("Name", "Id", "Version", "Source") -installedPackages $installedPackages
             }
             Default {}
         }
-        
+
     }
 }
 
@@ -760,7 +686,7 @@ function stopTimer() {
 
 # Add The Elements To The Form
 # $MainForm.Controls.AddRange(@(
-#         $tabControl, $bottomPanel, $fillingPanel, <# $Title,  $Description, #>$UpdateButton, $UpdateStatus, <# $Gif,#> $SelectAll, 
+#         $tabControl, $bottomPanel, $fillingPanel, <# $Title,  $Description, #>$UpdateButton, $UpdateStatus, <# $Gif,#> $SelectAll,
 #         $ShowUndetermined, $ListAllPackages, $WaitAfterDone, <# $UpgradeButton, #> $GroupBox
 #     ))
 
@@ -769,6 +695,10 @@ function stopTimer() {
 Write-Host "Hiding Terminal Window" -ForegroundColor DarkYellow
 
 [WGPSGUI.ConsoleUtils]::ShowWindow($hWnd, $hide) | Out-Null
+
+# Set Dark Theme
+
+# ApplyDarkTheme -Control $MainForm
 
 # Display The Form
 $formResult = $MainForm.ShowDialog()
@@ -781,14 +711,14 @@ if ($formResult -eq [Windows.Forms.DialogResult]::OK) {
     switch ($AcceptButton.Text) {
         "Install" {
             $subcommand = "install"
-            $ListView = $exploreListView 
+            $ListView = $exploreListView
         }
         "Uninstall" {
             $subcommand = "uninstall"
-            $ListView = $installedListView 
+            $ListView = $installedListView
         }
         "Upgrade" {
-            $subcommand = "upgrade" 
+            $subcommand = "upgrade"
             $ListView = $updatesListView
         }
         Default {}
@@ -798,7 +728,13 @@ if ($formResult -eq [Windows.Forms.DialogResult]::OK) {
         return
     }
     else {
-        $SelectedPacks = ($ListView.CheckedItems | ForEach-Object { "`"$($_.Text)`"" })
+        $LVCheckedItems = $ListView.CheckedItems
+        $SelectedPacks = $LVCheckedItems | ForEach-Object {
+            [System.Windows.Forms.ListViewItem+ListViewSubItemCollection]$subitems = $_.SubItems
+            $indexOfId = $subitems.IndexOfKey("Id")
+            $IdOfCheckedItem = $subitems[$indexOfId].Text
+            "`"$($IdOfCheckedItem)`""
+        }
     }
     Write-Host "> sudo winget $subcommand $SelectedPacks"
     sudo winget $subcommand $SelectedPacks

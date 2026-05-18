@@ -9,7 +9,7 @@ function Show-WinGetPackageInfoWindow {
         [string]$Version
     )
     [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
-    
+
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Drawing
 
@@ -28,7 +28,7 @@ function Show-WinGetPackageInfoWindow {
     $InfoWindow.ClientSize = '1000,900'
     $InfoWindow.StartPosition = "CenterScreen"
     $InfoWindow.Padding = New-Object System.Windows.Forms.Padding(0, 12, 0, 12)
-    $InfoWindow.BackColor = "#fbfbfb" # [System.Drawing.SystemColors]::ControlLightLight
+    $InfoWindow.BackColor = [System.Drawing.SystemColors]::ControlLightLight
     $InfoWindow.Add_Shown({ InfoWindow_OnShown })
 
     # Spinner
@@ -88,15 +88,16 @@ function Show-WinGetPackageInfoWindow {
         $InfoPanel.Controls.Add($header)
         $header
     }
-    
+
     function DisplayLabelOrLink {
         param (
             $Key, $Text, $Level
         )
-        
+
         $Text = [string]$Text
         if ($Text.StartsWith("http")) {
             $control = New-Object System.Windows.Forms.LinkLabel
+            $control.LinkColor = [System.Drawing.SystemColors]::Highlight
             $control.Add_LinkClicked({ OnLinkClicked })
             $control.AutoSize = $true
             # $control.Height = 30
@@ -114,7 +115,7 @@ function Show-WinGetPackageInfoWindow {
         $InfoPanel.Controls.Add($control)
         $control
     }
-    
+
     function DisplayMultiDimentionDict {
         param (
             $Dictionary, $Level
@@ -141,7 +142,7 @@ function Show-WinGetPackageInfoWindow {
     }
 
     function InfoWindow_OnShown {
-    
+
         # Clear info window
         $InfoPanel.Controls.Clear()
 
@@ -160,11 +161,11 @@ function Show-WinGetPackageInfoWindow {
             $cacheFilePath = "$PackageInfosDir\$cacheFileName"
             $packageInfo | Export-Clixml -Path $cacheFilePath
         }
-        
+
         $Spinner.Visible = $false
         $InfoWindow.Controls.Remove($Spinner)
         $Spinner.Dispose()
-        
+
         # Display Multi-Dimention Dictionary
         DisplayMultiDimentionDict -Dictionary $packageInfo -Level 0
 

@@ -26,7 +26,7 @@ function NewTabControl() {
 function NewTabPage ([string]$text) {
     $tabPage = New-Object System.Windows.Forms.TabPage
     $tabPage.Text = $text
-    $tabPage.UseVisualStyleBackColor = $true
+    # $tabPage.UseVisualStyleBackColor = $true
     $tabPage.Padding = 12
     $tabPage
 }
@@ -77,9 +77,9 @@ function NewSearchPanel {
     if ($height) {
         $tlPanel.Height = $height
     }
-    
+
     # $tlPanel.BackColor = "#00ff00"
-    
+
     $tlPanel
 }
 
@@ -111,7 +111,7 @@ function NewFilterPanel {
     }
 
     # $tlPanel.BackColor = "#ff00ff"
-    
+
     $tlPanel
 }
 
@@ -136,9 +136,9 @@ function NewBottomPanel {
     if ($height) {
         $tlPanel.Height = $height
     }
-    
+
     # $tlPanel.BackColor = "#ff0000"
-    
+
     $tlPanel
 }
 
@@ -159,14 +159,14 @@ function NewButton ($text, $width, $height, $anchor, $dock, $margin, [switch]$au
     }
     if ($dock) {
         $button.Dock = $dock
-    }    
+    }
     if ($margin) {
         $button.Margin = $margin
     }
     if ($font) {
         $button.Font = $font
     }
-    $button.UseVisualStyleBackColor = $true
+    # $button.UseVisualStyleBackColor = $true
     $button
 }
 
@@ -187,7 +187,7 @@ function NewLabel {
         $label.AutoSize = $false
     }
     if ($location) {
-        
+
         $label.Location = New-Object System.Drawing.Point($x, $y)
     }
     $label
@@ -207,13 +207,13 @@ function NewListView {
     $ListView = New-Object System.Windows.Forms.ListView
     $ListView.Dock = "Fill"
     $ListView.Font = New-Object System.Drawing.Font('Segoe UI', 10)
-    $ListView.BackColor = "#2d2d2d"
-    $ListView.ForeColor = "#f0f0f0"
+    # $ListView.BackColor = "#2d2d2d"
+    # $ListView.ForeColor = "#f0f0f0"
     $ListView.CheckBoxes = $true
     $ListView.View = "Details"
     $ListView.FullRowSelect = $true
-    $ListView.Columns.Add("Id"          , -2) | Out-Null
     $ListView.Columns.Add("Name"        , -2) | Out-Null
+    $ListView.Columns.Add("Id"          , -2) | Out-Null
     $ListView.Columns.Add("Version"     , -2) | Out-Null
     $ListView.Columns.Add("Available"   , -2) | Out-Null
     $ListView
@@ -230,9 +230,9 @@ function NewListViewItem {
         $packageDetails,
         [switch]$icon
     )
-    # Column 0 : Id
-    $Item = New-Object System.Windows.Forms.ListViewItem($package.Id)
-    $Item.SubItems[0].Name = "Id"
+    # Column 0 : Name
+    $Item = New-Object System.Windows.Forms.ListViewItem($package.Name)
+    $Item.SubItems[0].Name = "Name"
 
     if ($icon) {
         $iconIndex = $reverse_icon_map[$package.Id]
@@ -246,9 +246,9 @@ function NewListViewItem {
         $Item.ImageIndex = $iconIndex
     }
 
-    # Column 1 : Name
-    $Item.SubItems.Add($package.Name) | Out-Null
-    $Item.SubItems[1].Name = "Name"
+    # Column 1 : Id
+    $Item.SubItems.Add($package.Id) | Out-Null
+    $Item.SubItems[1].Name = "Id"
     if ("Explore" -eq $type) {
         # Column 2 : Version (Latest)
         $Item.SubItems.Add($package.Version) | Out-Null
@@ -286,6 +286,7 @@ function NewListViewItem {
 
 function NewTextBox ($dock, $anchor, $width, $padding, $margin) {
     $textBox = New-Object System.Windows.Forms.TextBox
+    $textBox.BorderStyle = 'FixedSingle'
     if ($dock) {
         $textBox.Dock = $dock
     }
@@ -302,7 +303,7 @@ function NewTextBox ($dock, $anchor, $width, $padding, $margin) {
 }
 
 function NewComboBox ($items) {
-    $comboBox = New-Object System.Windows.Forms.ComboBox
+    $comboBox = New-Object Windows.Forms.ComboBox
     $comboBox.Dock = "Top"
     $comboBox.Padding = "3, 3, 6, 3"
     $comboBox.Items.AddRange($items)
