@@ -11,6 +11,7 @@ function NewMainForm($size) {
     $MainForm.StartPosition = "CenterScreen"
     $MainForm.MinimumSize = New-Object System.Drawing.Size(320, 400)
     $MainForm.Icon = New-Object System.Drawing.Icon("$PSScriptRoot\..\..\Assets\icon_v2.ico")
+    $MainForm.Add_Resize({ MainForm_OnResize })
     # $MainForm.Padding = 12
     $MainForm
 }
@@ -203,19 +204,72 @@ function NewProgressBar {
     $ProgressBar
 }
 
+function ListView_OnResize {
+    if ($null -ne $this.Parent) {
+        UpdateTileSize $this
+    }
+}
+
+function Get-AllControls {
+    param (
+        [System.Windows.Forms.Control]$Container,
+        [type]$ControlType
+    )
+
+    $results = @()
+
+    foreach ($control in $Container.Controls) {
+        # Check if the control matches the requested type
+        if ($control -is $ControlType) {
+            $results += $control
+        }
+        # If the control has child controls, search deeper
+        if ($control.Controls.Count -gt 0) {
+            $results += Get-AllControls -Container $control -ControlType $ControlType
+        }
+    }
+
+    return $results
+}
+
+function MainForm_OnResize {
+    if ($this.WindowState -eq [System.Windows.Forms.FormWindowState]::Maximized) {
+        $ListView = @(Get-AllControls -Container $this -ControlType ([System.Windows.Forms.ListView]))[0]
+        $originalWidth = $ListView.Width
+        $ListView.Width = $originalWidth - 1
+        $ListView.Width = $originalWidth
+    }
+}
+
+function UpdateTileSize {
+    param ($LV)
+    if ($Config -and $Config.RowHeight) {
+        $rowHeight = $Config.RowHeight
+    }
+    else {
+        $rowHeight = 100
+    }
+    $availableWidth = $LV.ClientSize.Width - 5
+    if ($availableWidth -gt 100) {
+        $LV.TileSize = New-Object System.Drawing.Size($availableWidth, $rowHeight)
+    }
+}
+
 function NewListView {
     $ListView = New-Object System.Windows.Forms.ListView
     $ListView.Dock = "Fill"
     $ListView.Font = New-Object System.Drawing.Font('Segoe UI', 10)
     # $ListView.BackColor = "#2d2d2d"
     # $ListView.ForeColor = "#f0f0f0"
-    $ListView.CheckBoxes = $true
-    $ListView.View = "Details"
+    $ListView.CheckBoxes = $false
+    $ListView.View = "Tile"
+    # $ListView.TileSize = New-Object System.Drawing.Size(500, 90)
     $ListView.FullRowSelect = $true
     $ListView.Columns.Add("Name"        , -2) | Out-Null
-    $ListView.Columns.Add("Id"          , -2) | Out-Null
-    $ListView.Columns.Add("Version"     , -2) | Out-Null
-    $ListView.Columns.Add("Available"   , -2) | Out-Null
+    $ListView.Columns.Add("Id"          , -2, [System.Windows.Forms.HorizontalAlignment]::Right) | Out-Null
+    $ListView.Columns.Add("Version"     , -2, [System.Windows.Forms.HorizontalAlignment]::Right) | Out-Null
+    $ListView.Columns.Add("Available"   , -2, [System.Windows.Forms.HorizontalAlignment]::Right) | Out-Null
+    $ListView.Add_Resize({ ListView_OnResize })
     $ListView
 }
 
@@ -232,7 +286,11 @@ function NewListViewItem {
     )
     # Column 0 : Name
     $Item = New-Object System.Windows.Forms.ListViewItem($package.Name)
+    $Item.Tag = $package
+    $Item.UseItemStyleForSubItems = $false
     $Item.SubItems[0].Name = "Name"
+    $Item.SubItems[0].Tag = $package.Name
+    $Item.SubItems[0].Font = New-Object System.Drawing.Font($Item.SubItems[0].Font, [System.Drawing.FontStyle]::Bold)
 
     if ($icon) {
         $iconIndex = $reverse_icon_map[$package.Id]
@@ -249,13 +307,16 @@ function NewListViewItem {
     # Column 1 : Id
     $Item.SubItems.Add($package.Id) | Out-Null
     $Item.SubItems[1].Name = "Id"
+    $Item.SubItems[1].Tag = $package.Id
     if ("Explore" -eq $type) {
         # Column 2 : Version (Latest)
-        $Item.SubItems.Add($package.Version) | Out-Null
+        $Item.SubItems.Add("Available: $($package.Version)") | Out-Null
         $Item.SubItems[2].Name = "Available"
+        $Item.SubItems[2].Tag = $package.Version
         # Column 3 : Source
-        $Item.SubItems.Add($package.Source) | Out-Null
+        $Item.SubItems.Add("Source: $($package.Source)") | Out-Null
         $Item.SubItems[3].Name = "Source"
+        $Item.SubItems[3].Tag = $package.Source
 
         if ((IsInstalled $package $installedPackages )) {
             $Item.ForeColor = [System.Drawing.SystemColors]::ActiveCaption
@@ -264,29 +325,34 @@ function NewListViewItem {
     }
     if (("Installed" -eq $type) -or ("Update" -eq $type)) {
         # Column 2 : Version (Installed)
-        $Item.SubItems.Add($package.InstalledVersion) | Out-Null
+        $Item.SubItems.Add("Version: $($package.InstalledVersion)") | Out-Null
         $Item.SubItems[2].Name = "Version"
+        $Item.SubItems[2].Tag = $package.InstalledVersion
         #Column 3 : Last Available Version
         if ($package.AvailableVersions.Count -gt 0) {
-            $Item.SubItems.Add($package.AvailableVersions[0]) | Out-Null
+            $Item.SubItems.Add("Available: $($package.AvailableVersions[0])") | Out-Null
+            $Item.SubItems[3].Tag = $package.AvailableVersions[0]
         }
         else {
             $Item.SubItems.Add("") | Out-Null
+            $Item.SubItems[3].Tag = ""
         }
         $Item.SubItems[3].Name = "Available"
         # Column 4 : Source
         if ($package.Source) {
-            $Item.SubItems.Add($package.Source) | Out-Null
+            $Item.SubItems.Add("Source: $($package.Source)") | Out-Null
             $Item.SubItems[4].Name = "Source"
+            $Item.SubItems[4].Tag = $package.Source
         }
     }
+    $Item.SubItems | Where-Object Name -NE "Name" | ForEach-Object { $_.ForeColor = [System.Drawing.SystemColors]::InfoText }
 
     $Item
 }
 
 function NewTextBox ($dock, $anchor, $width, $padding, $margin) {
     $textBox = New-Object System.Windows.Forms.TextBox
-    $textBox.BorderStyle = 'FixedSingle'
+    # $textBox.BorderStyle = 'FixedSingle'
     if ($dock) {
         $textBox.Dock = $dock
     }

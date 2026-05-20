@@ -37,12 +37,28 @@ function Get-PackageIdFromDetailsHeader {
     $headerLineText.Split(" [")[1].Split(" [")[-1].Trim("]")
 }
 
+function IsObjectCacheFresh ([double]$freshnessLimitInSecs = 60, $PackageDetailsCachePath) {
+    $lastWriteTime = (Get-ChildItem $PackageDetailsCachePath).LastWriteTime
+    $timeDiffSec = ((Get-Date) - $lastWriteTime).TotalSeconds
+    $res = ($timeDiffSec -le $freshnessLimitInSecs)
+    if (! $res) {
+        Write-Host $PackageDetailsCachePath "`nLast Write Time:" $lastWriteTime.ToString() "`nWas" ($timeDiffSec / 60).ToString() "minutes ago." -ForegroundColor Cyan
+    }
+    $res
+}
+
 function Get-WingetPackegeDetails {
+    param ($PackageDetailsCachePath)
+    if ($PackageDetailsCachePath) {
+        if ((Test-Path -Path $PackageDetailsCachePath -PathType Leaf) -and (IsObjectCacheFresh (60 * 30) $PackageDetailsCachePath)) {
+            return (Import-Clixml -Path $PackageDetailsCachePath)
+        }
+    }
     [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
     $details = winget list --details
     $headers = $details | Select-String "^\(.*\/.*\).*\[.*\]"
 
-    for ($i = 0; $i -lt $headers.Count; $i++) {
+    $pkgDetails = for ($i = 0; $i -lt $headers.Count; $i++) {
         $header = $headers[$i]
 
         $pkgDetail = New-Object PackageDetail
@@ -69,6 +85,12 @@ function Get-WingetPackegeDetails {
 
         $pkgDetail
     }
+
+    if ($PackageDetailsCachePath) {
+        $pkgDetails | Export-Clixml -Path $PackageDetailsCachePath | Out-Null
+    }
+
+    $pkgDetails
 }
 
 function Get-SafeIcon {
@@ -517,7 +539,12 @@ function GetExePackageIcon {
 }
 
 function GetPackageIcons {
-    param($Packages, [int]$PrefIconSize = 24)
+    param($Packages, [int]$PrefIconSize = 24, $IconTableCachePath)
+    if ($IconTableCachePath) {
+        if ((Test-Path -Path $IconTableCachePath -PathType Leaf) -and (IsObjectCacheFresh (60 * 30) $IconTableCachePath)) {
+            return (Import-Clixml -Path $IconTableCachePath)
+        }
+    }
 
     $iconLUT = @{}
     $AppxPackages = Get-AppxPackage
@@ -542,6 +569,10 @@ function GetPackageIcons {
                 Default { }
             }
         }
+    }
+
+    if ($IconTableCachePath) {
+        $iconLUT | Export-Clixml -Path $IconTableCachePath | Out-Null
     }
 
     return $iconLUT

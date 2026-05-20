@@ -39,6 +39,8 @@ if (-not (Test-Path -Path $WinGetPSGUIDataDir -PathType Container)) {
 
 # $AllPackagesLocalPath = "$WinGetPSGUIDataDir\AllPackages.xml"
 $InstalledPackagesLocalPath = "$WinGetPSGUIDataDir\InstalledPackages.xml"
+$PackageDetailsCachePath = "$WinGetPSGUIDataDir\PackageDetails.xml"
+$IconTableCachePath = "$WinGetPSGUIDataDir\IconTable.xml"
 $configFile = "$WinGetPSGUIDataDir\Config.json"
 $Config = $Config = Get-Content -Path $configFile |  ConvertFrom-Json
 if (!$Config) {
@@ -55,7 +57,13 @@ $hWnd = [WGPSGUI.ConsoleUtils]::GetConsoleWindow()
 
 [Windows.Forms.Application]::EnableVisualStyles()
 [WGPSGUI.DPIAwareness]::SetProcessDPIAware()
-[System.Windows.Forms.Application]::SetColorMode([System.Windows.Forms.SystemColorMode]::System)
+switch ($Config.Theme) {
+    Dark { $ColorMode = [System.Windows.Forms.SystemColorMode]::Dark }
+    Classic { $ColorMode = [System.Windows.Forms.SystemColorMode]::Classic }
+    System { $ColorMode = [System.Windows.Forms.SystemColorMode]::System }
+    Default { $ColorMode = [System.Windows.Forms.SystemColorMode]::System }
+}
+[System.Windows.Forms.Application]::SetColorMode($ColorMode)
 
 # Create a new form
 $MainForm = NewMainForm -size $Config.Size
@@ -211,7 +219,7 @@ $tabControl.Controls.AddRange(@($dummyTabPage, $exploreTabPage, $installedTabPag
 
 Write-Host "Getting winget list details" -ForegroundColor DarkYellow
 
-$details = Get-WingetPackegeDetails
+$details = Get-WingetPackegeDetails -PackageDetailsCachePath $PackageDetailsCachePath
 
 Write-Host "Creating Listviews" -ForegroundColor DarkYellow
 
@@ -221,7 +229,7 @@ $updatesListView = NewListView
 
 Write-Host "Filling Icon Lookup Table" -ForegroundColor DarkYellow
 
-$iconLookup = GetPackageIcons $details $Config.IconSize
+$iconLookup = GetPackageIcons $details $Config.IconSize -IconTableCachePath $IconTableCachePath
 
 Write-Host "Creating Image List object" -ForegroundColor DarkYellow
 
@@ -251,7 +259,9 @@ foreach ($iconLookupItem in $iconLookup.GetEnumerator()) {
 Write-Host "Set ListView SmallImageLists as Image List" -ForegroundColor DarkYellow
 
 $installedListView.SmallImageList = $imageList
+$installedListView.LargeImageList = $imageList
 $updatesListView.SmallImageList = $imageList
+$updatesListView.LargeImageList = $imageList
 
 $exploreListView.Add_MouseDown({ ListView_OnMouseDown })
 $installedListView.Add_MouseDown({ ListView_OnMouseDown })
@@ -279,18 +289,30 @@ function OnTabSelected {
             $fillingPanel.Controls.Clear()
             $fillingPanel.Controls.Add($exploreListView)
             $AcceptButton.Text = "Install"
+            UpdateTileSize $exploreListView
+            $originalWidth = $exploreListView.Width
+            $exploreListView.Width = $originalWidth - 1
+            $exploreListView.Width = $originalWidth
         }
         # Installed
         1 {
             $fillingPanel.Controls.Clear()
             $fillingPanel.Controls.Add($installedListView)
             $AcceptButton.Text = "Uninstall"
+            UpdateTileSize $installedListView
+            $originalWidth = $installedListView.Width
+            $installedListView.Width = $originalWidth - 1
+            $installedListView.Width = $originalWidth
         }
         # Updates
         2 {
             $fillingPanel.Controls.Clear()
             $fillingPanel.Controls.Add($updatesListView)
             $AcceptButton.Text = "Upgrade"
+            UpdateTileSize $updatesListView
+            $originalWidth = $updatesListView.Width
+            $updatesListView.Width = $originalWidth - 1
+            $updatesListView.Width = $originalWidth
         }
         Default {}
     }
@@ -302,8 +324,8 @@ function ListView_OnMouseDown {
         [System.Windows.Forms.ListViewItem+ListViewSubItemCollection]$subitems = $selectedItem.SubItems
         $indexOfAvailableVersion = $subitems.IndexOfKey("Available")
         $indexOfId = $subitems.IndexOfKey("Id")
-        $availableVersion = $subitems[$indexOfAvailableVersion].Text
-        $IdOfSelectedItem = $subitems[$indexOfId].Text
+        $availableVersion = $subitems[$indexOfAvailableVersion].Tag
+        $IdOfSelectedItem = $subitems[$indexOfId].Tag
         Show-WinGetPackageInfoWindow -Id -Query $IdOfSelectedItem -Version $availableVersion
     }
 }
@@ -446,12 +468,31 @@ function Save_Config {
 function MainForm_OnShownReal {
     MainForm_OnShown
     $tabControl.Controls.RemoveAt(0)
+    UpdateTileSize $exploreListView
+    UpdateTileSize $installedListView
+    UpdateTileSize $updatesListView
+}
+
+function GetIsUpdateAvailable {
+    param ($Package)
+    if ($Package.IsUpdateAvailable -eq "True") {
+        return $true
+    }
+
+    try {
+        $LastAvailableVersion = [System.Version]($Package.AvailableVersions)[0]
+        $InstalledVersion = [System.Version]$Package.InstalledVersion
+        return ($LastAvailableVersion -gt $InstalledVersion)
+    }
+    catch {
+        return $false
+    }
 }
 
 function MainForm_OnShown {
     $installedPackages = GetInstalledPackages -PostAction "MainForm_OnShown"
     if ($installedPackages) {
-        $updatablePackages = $installedPackages | Where-Object IsUpdateAvailable -Eq "True"
+        $updatablePackages = $installedPackages | Where-Object { GetIsUpdateAvailable $_ }
         $determinedUpdatablePackages = $updatablePackages | Where-Object InstalledVersion -NE "Unknown"
 
         FillListView -type Installed `
@@ -723,16 +764,16 @@ if ($formResult -eq [Windows.Forms.DialogResult]::OK) {
         }
         Default {}
     }
-    if ($ListView.CheckedItems.Count -eq 0) {
+    if ($ListView.SelectedItems.Count -eq 0) {
         Write-Host "Nothing has selected"
         return
     }
     else {
-        $LVCheckedItems = $ListView.CheckedItems
-        $SelectedPacks = $LVCheckedItems | ForEach-Object {
+        $LVSelectedItems = $ListView.SelectedItems
+        $SelectedPacks = $LVSelectedItems | ForEach-Object {
             [System.Windows.Forms.ListViewItem+ListViewSubItemCollection]$subitems = $_.SubItems
             $indexOfId = $subitems.IndexOfKey("Id")
-            $IdOfCheckedItem = $subitems[$indexOfId].Text
+            $IdOfCheckedItem = $subitems[$indexOfId].Tag
             "`"$($IdOfCheckedItem)`""
         }
     }
